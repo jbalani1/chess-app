@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const username = searchParams.get('username') || 'negrilmannings'
+  const username = searchParams.get('username') || process.env.CHESS_COM_USERNAME || ''
   const color = searchParams.get('color') // 'white', 'black', or null for all
 
   try {

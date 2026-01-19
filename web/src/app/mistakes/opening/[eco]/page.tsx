@@ -109,7 +109,7 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
 
   const getBoardOrientation = (): 'white' | 'black' => {
     if (!selectedGame) return 'white'
-    const username = 'negrilmannings'
+    const username = process.env.NEXT_PUBLIC_CHESS_COM_USERNAME || ''
     return selectedGame.black_player.toLowerCase() === username.toLowerCase() ? 'black' : 'white'
   }
 
