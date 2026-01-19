@@ -256,17 +256,17 @@ export default async function HomePage() {
             </a>
 
             <a
-              href="/insights"
+              href="/positions"
               className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
-                  <span className="text-white font-bold">🔍</span>
+                <div className="w-8 h-8 bg-teal-500 rounded-md flex items-center justify-center">
+                  <span className="text-white font-bold">♜</span>
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">Blunder Categories</p>
-                <p className="text-sm text-gray-500">Why you make mistakes</p>
+                <p className="text-sm font-medium text-gray-900">Common Positions</p>
+                <p className="text-sm text-gray-500">Positions where you make mistakes</p>
               </div>
             </a>
           </div>

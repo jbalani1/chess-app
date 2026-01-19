@@ -315,9 +315,10 @@ class ChessComIngester:
         for move in game.mainline_moves():
             # Get position before move
             fen_before = board.fen()
-            # eval_before is White-centric from engine
-            # Use deeper analysis for critical positions (like Chess.com)
-            eval_before = self.engine.analyze_position(fen_before)
+            # Analyze position before move to get eval AND best move
+            analysis_before = self.engine.analyze_position_with_best_move(fen_before)
+            eval_before = analysis_before.get('eval', 0)
+            best_move_uci_before = analysis_before.get('best_move')
 
             # Convert move to SAN (must be before pushing)
             move_san = board.san(move)
@@ -462,6 +463,18 @@ class ChessComIngester:
                 except Exception as e:
                     print(f"Error classifying blunder at ply {ply}: {e}")
 
+            # Convert best move UCI to SAN for readability
+            best_move_san = None
+            if best_move_uci_before:
+                try:
+                    best_move_obj = chess.Move.from_uci(best_move_uci_before)
+                    # Use a temporary board at position before the move
+                    temp_board = chess.Board(fen_before)
+                    if best_move_obj in temp_board.legal_moves:
+                        best_move_san = temp_board.san(best_move_obj)
+                except:
+                    pass
+
             move_data = {
                 'ply': ply,
                 'move_san': move_san,
@@ -478,7 +491,9 @@ class ChessComIngester:
                 'recommendations': insights['recommendations'],
                 'move_quality': insights['move_quality'],
                 'blunder_category': blunder_category,
-                'blunder_details': blunder_details
+                'blunder_details': blunder_details,
+                'best_move_san': best_move_san,
+                'best_move_uci': best_move_uci_before
             }
             
             moves_data.append(move_data)
@@ -553,8 +568,9 @@ class ChessComIngester:
                         INSERT INTO moves (game_id, ply, move_san, move_uci, eval_before, eval_after,
                                          eval_delta, classification, piece_moved, phase, position_fen,
                                          tactical_motifs, positional_patterns, recommendations, move_quality,
-                                         engine_config_hash, blunder_category, blunder_details)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                         engine_config_hash, blunder_category, blunder_details,
+                                         best_move_san, best_move_uci)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (game_id, ply, engine_config_hash) DO NOTHING
                     """, (
                         game_id,
@@ -574,7 +590,9 @@ class ChessComIngester:
                         move_data['move_quality'],
                         config_hash,
                         move_data.get('blunder_category'),
-                        json.dumps(move_data['blunder_details']) if move_data.get('blunder_details') else None
+                        json.dumps(move_data['blunder_details']) if move_data.get('blunder_details') else None,
+                        move_data.get('best_move_san'),
+                        move_data.get('best_move_uci')
                     ))
                 
                 self.db_conn.commit()
