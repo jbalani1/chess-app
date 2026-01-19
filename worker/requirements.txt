@@ -1,0 +1,5 @@
+python-chess==1.999
+requests==2.31.0
+python-dotenv==0.21.1
+psycopg2-binary==2.9.9
+stockfish==3.28.0
