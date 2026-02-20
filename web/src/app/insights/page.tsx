@@ -5,8 +5,9 @@ import TacticalInsights from '@/components/insights/TacticalInsights'
 import PositionalInsights from '@/components/insights/PositionalInsights'
 import MistakePatterns from '@/components/insights/MistakePatterns'
 import BlunderCategories from '@/components/insights/BlunderCategories'
+import RecurringPatterns from '@/components/insights/RecurringPatterns'
 
-type InsightCategory = 'blunders' | 'tactical' | 'positional' | 'patterns' | null
+type InsightCategory = 'blunders' | 'tactical' | 'positional' | 'patterns' | 'recurring' | null
 
 const categories = [
   {
@@ -20,6 +21,18 @@ const categories = [
     hoverColor: 'hover:border-red-400',
     textColor: 'text-red-900',
     subtextColor: 'text-red-700',
+  },
+  {
+    id: 'recurring' as const,
+    title: 'Recurring Patterns',
+    description: 'Your most persistent weaknesses across games — the patterns worth focusing on to improve fastest',
+    icon: '🔄',
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    hoverColor: 'hover:border-amber-400',
+    textColor: 'text-amber-900',
+    subtextColor: 'text-amber-700',
   },
   {
     id: 'tactical' as const,
@@ -66,6 +79,8 @@ export default function InsightsPage() {
     switch (selectedCategory) {
       case 'blunders':
         return <BlunderCategories />
+      case 'recurring':
+        return <RecurringPatterns />
       case 'tactical':
         return <TacticalInsights />
       case 'positional':

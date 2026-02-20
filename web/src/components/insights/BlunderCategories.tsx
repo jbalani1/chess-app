@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import BlunderGalleryModal from '../BlunderGalleryModal'
 import InsightFilters, { FilterState, buildFilterQueryString } from './InsightFilters'
+import TemporalTrends from './TemporalTrends'
 
 interface BlunderCategoryStats {
   category: string
@@ -176,6 +177,9 @@ export default function BlunderCategories() {
       {/* Filters */}
       <InsightFilters filters={filters} onChange={handleFiltersChange} />
 
+      {/* Temporal Trends */}
+      <TemporalTrends filters={filters} />
+
       {categories.length === 0 ? (
         <div className="text-gray-500 text-center py-8">
           No blunder data available yet. Analyze more games to see patterns!
@@ -262,7 +266,23 @@ export default function BlunderCategories() {
                     {/* Recommendation */}
                     <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 text-sm mb-1">How to Improve</h4>
-                      <p className="text-sm text-blue-800">{info.recommendation}</p>
+                      <p className="text-sm text-blue-800">
+                        {(() => {
+                          const phaseEntries = Object.entries(cat.by_phase).sort((a, b) => b[1] - a[1])
+                          const pieceEntries = Object.entries(cat.by_piece).sort((a, b) => b[1] - a[1])
+                          const topPhase = phaseEntries[0]
+                          const topPiece = pieceEntries[0]
+                          const parts: string[] = []
+                          if (topPhase && topPhase[1] > cat.count * 0.4) {
+                            parts.push(`Most common in the ${topPhase[0]}`)
+                          }
+                          if (topPiece && topPiece[1] > cat.count * 0.3) {
+                            parts.push(`${parts.length ? ', especially' : 'Especially common'} with ${pieceNames[topPiece[0]] || topPiece[0]}s`)
+                          }
+                          const context = parts.length ? `${parts.join('')}. ` : ''
+                          return `${context}${info.recommendation}`
+                        })()}
+                      </p>
                     </div>
 
                     {/* View Games Button */}

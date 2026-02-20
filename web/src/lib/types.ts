@@ -20,6 +20,33 @@ export interface Game {
   created_at: string;
 }
 
+export type BlunderCategory =
+  | 'hanging_piece'
+  | 'missed_tactic'
+  | 'overlooked_check'
+  | 'greedy_capture'
+  | 'back_rank'
+  | 'opening_principle'
+  | 'endgame_technique'
+  | 'time_pressure'
+  | 'positional_collapse'
+  | 'calculation_error';
+
+export interface TacticalMotif {
+  motif_type: string;
+  description: string;
+  severity: 'minor' | 'major' | 'critical';
+  piece_involved: string;
+  fen: string;
+}
+
+export interface PositionalPattern {
+  pattern_type: string;
+  description: string;
+  severity: string;
+  recommendation: string;
+}
+
 export interface Move {
   id: string;
   game_id: string;
@@ -35,6 +62,18 @@ export interface Move {
   position_fen: string;
   engine_config_hash: string;
   created_at: string;
+  best_move_san?: string;
+  best_move_uci?: string;
+  move_quality?: string;
+  recommendations?: string[];
+  tactical_motifs?: TacticalMotif[];
+  positional_patterns?: PositionalPattern[];
+  blunder_category?: BlunderCategory;
+  blunder_details?: {
+    confidence: number;
+    explanation: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface EngineConfig {

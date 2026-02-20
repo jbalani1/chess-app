@@ -513,6 +513,29 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
                       </p>
                     </div>
                   )}
+                  {currentMove.recommendations &&
+                   currentMove.recommendations.length > 0 &&
+                   effectiveClass !== 'good' && (
+                    <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
+                      <p className="text-xs font-medium text-[var(--text-secondary)] mb-1">Recommendations:</p>
+                      <ul className="text-sm space-y-1">
+                        {currentMove.recommendations.map((rec: string, i: number) => (
+                          <li key={i} className="flex items-start text-[var(--text-primary)]">
+                            <span className="text-blue-400 mr-2 flex-shrink-0">&#8226;</span>
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {currentMove.blunder_details?.explanation &&
+                   effectiveClass === 'blunder' && (
+                    <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
+                      <p className="text-sm text-red-400">
+                        {currentMove.blunder_details.explanation}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )
             })()}
