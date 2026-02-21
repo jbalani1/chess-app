@@ -158,10 +158,10 @@ export default function BlunderGalleryModal({
                   className="block border rounded-lg overflow-hidden hover:shadow-lg transition-all hover:border-blue-300 bg-white"
                 >
                   {/* Chess Position */}
-                  <div className="p-2 bg-gray-100">
+                  <div className="p-2 bg-gray-700">
                     <ChessBoard
                       fen={blunder.position_fen}
-                      width={200}
+                      width={220}
                       showCoordinates={false}
                     />
                   </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { JoinedGameData } from '@/lib/types'
 
 // Helper to calculate date from range
 function getDateFromRange(range: string): Date | null {
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       if (!category) continue
 
       // Filter: only include user's moves
-      const game = move.games as any
+      const game = move.games as unknown as JoinedGameData
       const username = game.username?.toLowerCase()
       const whitePlayer = game.white_player?.toLowerCase()
       const blackPlayer = game.black_player?.toLowerCase()

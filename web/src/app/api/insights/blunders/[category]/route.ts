@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { JoinedGameData } from '@/lib/types'
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function GET(
     // In chess: even ply (0,2,4...) = White's move, odd ply (1,3,5...) = Black's move
     const result = (blunders || [])
       .filter(blunder => {
-        const game = blunder.games as any
+        const game = blunder.games as unknown as JoinedGameData
         const username = game.username?.toLowerCase()
         const whitePlayer = game.white_player?.toLowerCase()
         const blackPlayer = game.black_player?.toLowerCase()
@@ -69,7 +70,7 @@ export async function GET(
         return (userIsWhite && isWhiteMove) || (userIsBlack && isBlackMove)
       })
       .map(blunder => {
-        const game = blunder.games as any
+        const game = blunder.games as unknown as JoinedGameData
         const details = typeof blunder.blunder_details === 'string'
           ? JSON.parse(blunder.blunder_details)
           : blunder.blunder_details

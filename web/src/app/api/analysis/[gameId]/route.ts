@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { gameId: string } }
+  { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
-    const gameId = params.gameId
+    const { gameId } = await params
     
     if (!gameId) {
       return NextResponse.json({ error: 'Game ID is required' }, { status: 400 })

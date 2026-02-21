@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+interface TacticalMotif {
+  motif_type: string
+  description: string
+  severity: string
+  piece_involved?: string
+  pinned_piece?: string
+  recommendation?: string
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ motifType: string }> }
@@ -42,9 +51,18 @@ export async function GET(
     const processedGames = (games || [])
       .map(move => {
         const motifs = move.tactical_motifs || []
-        const relevantMotifs = motifs.filter((motif: any) => motif.motif_type === motifType)
+        const relevantMotifs = motifs.filter((motif: TacticalMotif) => motif.motif_type === motifType)
         const topMotif = relevantMotifs[0]
         const pinnedPiece = topMotif?.pinned_piece || topMotif?.piece_involved || null
+        const game = move.games as unknown as {
+          id: string
+          white_player: string
+          black_player: string
+          played_at: string
+          result: string
+          opening_name: string
+          eco: string
+        }
 
         return {
           moveId: move.id,
@@ -57,13 +75,13 @@ export async function GET(
           motifs: relevantMotifs,
           pinnedPiece,
           game: {
-            id: move.games.id,
-            whitePlayer: move.games.white_player,
-            blackPlayer: move.games.black_player,
-            playedAt: move.games.played_at,
-            result: move.games.result,
-            openingName: move.games.opening_name,
-            eco: move.games.eco
+            id: game.id,
+            whitePlayer: game.white_player,
+            blackPlayer: game.black_player,
+            playedAt: game.played_at,
+            result: game.result,
+            openingName: game.opening_name,
+            eco: game.eco
           }
         }
       })
@@ -72,7 +90,7 @@ export async function GET(
         entry.motifs && entry.motifs.length > 0 && (
           entry.classification === 'mistake' ||
           entry.classification === 'blunder' ||
-          entry.motifs.some((m: any) => (m.severity === 'major' || m.severity === 'critical'))
+          entry.motifs.some((m: TacticalMotif) => (m.severity === 'major' || m.severity === 'critical'))
         )
       ))
       // Prefer worse eval drops

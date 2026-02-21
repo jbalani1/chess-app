@@ -60,10 +60,12 @@ export interface Move {
   piece_moved: string;
   phase: GamePhase;
   position_fen: string;
+  position_fen_before?: string | null;
   engine_config_hash: string;
   created_at: string;
-  best_move_san?: string;
-  best_move_uci?: string;
+  best_move_san?: string | null;
+  best_move_uci?: string | null;
+  captured_piece?: string | null;
   move_quality?: string;
   recommendations?: string[];
   tactical_motifs?: TacticalMotif[];
@@ -148,6 +150,121 @@ export interface MistakeFilters {
   date_from?: string;
   date_to?: string;
   phase?: GamePhase;
+}
+
+// Drill Mode Types
+export interface DrillPosition {
+  move_id: string;
+  game_id: string;
+  position_fen: string;
+  best_move_san: string;
+  best_move_uci: string;
+  blunder_category: BlunderCategory;
+  blunder_explanation: string;
+  eval_delta: number;
+  phase: GamePhase;
+  ply: number;
+  white_player: string;
+  black_player: string;
+  username: string;
+  played_at: string;
+  // Spaced repetition info (if previously attempted)
+  next_review_at?: string | null;
+  repetition_number?: number;
+  last_attempt_correct?: boolean | null;
+}
+
+export interface DrillAttempt {
+  id: string;
+  move_id: string;
+  username: string;
+  attempted_move_uci: string | null;
+  attempted_move_san: string | null;
+  is_correct: boolean;
+  time_spent_ms: number | null;
+  easiness_factor: number;
+  repetition_number: number;
+  interval_days: number;
+  next_review_at: string;
+  created_at: string;
+}
+
+export interface DrillAttemptResult {
+  is_correct: boolean;
+  correct_move_san: string;
+  correct_move_uci: string;
+  explanation: string;
+  eval_delta: number;
+  next_review_at: string;
+  repetition_number: number;
+  interval_days: number;
+}
+
+export interface DrillStats {
+  total_positions: number;
+  total_attempts: number;
+  accuracy_rate: number;
+  positions_mastered: number;
+  positions_due: number;
+  current_streak: number;
+  by_category: Record<BlunderCategory, CategoryDrillStats>;
+}
+
+export interface CategoryDrillStats {
+  total: number;
+  drilled: number;
+  mastered: number;
+  accuracy: number;
+  due_count: number;
+}
+
+// Common interface for game data from Supabase joins
+export interface JoinedGameData {
+  id: string;
+  username: string;
+  white_player: string;
+  black_player: string;
+  result: string;
+  opening_name: string;
+  eco: string;
+  time_control: string;
+  played_at: string;
+}
+
+// Opening Prep Types
+export interface OpeningPattern {
+  eco: string
+  opening_name: string
+  user_color: 'white' | 'black'
+  games_played: number
+  opening_mistake_rate: number
+  trouble_score: number
+  trouble_positions: TroublePosition[]
+}
+
+export interface TroublePosition {
+  position_fen: string
+  move_number: number
+  typical_ply: number
+  occurrence_count: number
+  mistake_count: number
+  blunder_count: number
+  inaccuracy_count: number
+  good_count: number
+  mistake_rate: number
+  avg_eval_delta: number
+  last_mistake_date: string | null
+  recency_score: number
+  your_moves: MoveChoice[]
+}
+
+export interface MoveChoice {
+  move_san: string
+  count: number
+  classifications: { good: number; inaccuracy: number; mistake: number; blunder: number }
+  avg_eval_delta: number
+  best_move_san: string | null
+  game_instances: { game_id: string; move_id: string; played_at: string; eval_delta: number }[]
 }
 
 // Helper to check if a move is checkmate

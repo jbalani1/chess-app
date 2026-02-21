@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+interface PositionMove {
+  id: string
+  game_id: string
+  ply: number
+  move_san: string
+  classification: string
+  eval_delta: number
+  piece_moved: string
+  phase: string
+  position_fen: string
+  best_move_san: string | null
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -11,6 +24,7 @@ export async function GET(request: Request) {
   const username = searchParams.get('username') || process.env.CHESS_COM_USERNAME || ''
   const minOccurrences = parseInt(searchParams.get('minOccurrences') || '2')
   const limit = parseInt(searchParams.get('limit') || '50')
+  const phaseFilter = searchParams.get('phase') || 'all'
 
   if (!username) {
     return NextResponse.json({ error: 'Username required' }, { status: 400 })
@@ -50,7 +64,7 @@ export async function GET(request: Request) {
       }
 
       // Get all moves - need to paginate since Supabase limits to 1000 rows
-      let allMoves: any[] = []
+      let allMoves: PositionMove[] = []
       const pageSize = 1000
       let offset = 0
       let hasMore = true
@@ -107,6 +121,9 @@ export async function GET(request: Request) {
         for (let i = 0; i < gameMoves.length; i++) {
           const move = gameMoves[i]
 
+          // Apply phase filter
+          if (phaseFilter !== 'all' && move.phase !== phaseFilter) continue
+
           // Get position BEFORE this move
           let beforeFen: string
           if (move.ply === 1) {
@@ -153,7 +170,7 @@ export async function GET(request: Request) {
 
       // Convert to array and filter
       const result = Object.entries(positionMoves)
-        .filter(([_, data]) => data.moves.length >= minOccurrences)
+        .filter(([, data]) => data.moves.length >= minOccurrences)
         .map(([fen, data]) => ({
           position_fen: fen,
           occurrence_count: data.moves.length,

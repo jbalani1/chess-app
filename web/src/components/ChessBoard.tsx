@@ -8,24 +8,35 @@ interface ChessBoardProps {
   width?: number
   showCoordinates?: boolean
   orientation?: 'white' | 'black'
+  lastMove?: { from: string; to: string } | null
 }
+
+// Chess.com style colors
+const LIGHT_SQUARE = "#EEEED2"
+const DARK_SQUARE = "#769656"
+const HIGHLIGHT_COLOR = "rgba(255, 255, 0, 0.5)"
 
 export default function ChessBoard({
   fen,
   onPositionChange,
-  width = 400,
+  width = 560,
   showCoordinates = true,
   orientation = 'white',
+  lastMove = null,
 }: ChessBoardProps) {
   // Extract just the board position part from FEN (first segment)
   const fenString = fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
   const position = fenString.trim().split(" ")[0]
 
-  // Debug log to verify position changes
-  console.log('ChessBoard render:', { position, orientation })
+  // Build square styles for last move highlighting
+  const squareStyles: Record<string, React.CSSProperties> = {}
+  if (lastMove) {
+    squareStyles[lastMove.from] = { backgroundColor: HIGHLIGHT_COLOR }
+    squareStyles[lastMove.to] = { backgroundColor: HIGHLIGHT_COLOR }
+  }
 
   return (
-    <div className="flex justify-center" style={{ width }}>
+    <div className="flex justify-center rounded-md overflow-hidden shadow-lg" style={{ width }}>
       <Chessboard
         key={position}
         options={{
@@ -34,8 +45,9 @@ export default function ChessBoard({
           showNotation: showCoordinates,
           allowDragging: false,
           showAnimations: false,
-          darkSquareStyle: { backgroundColor: "#779556" },
-          lightSquareStyle: { backgroundColor: "#ebecd0" },
+          darkSquareStyle: { backgroundColor: DARK_SQUARE },
+          lightSquareStyle: { backgroundColor: LIGHT_SQUARE },
+          squareStyles: squareStyles,
         }}
       />
     </div>

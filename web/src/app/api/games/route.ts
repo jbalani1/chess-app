@@ -34,6 +34,11 @@ export async function GET(request: NextRequest) {
     if (filters.eco) {
       query = query.eq('eco', filters.eco)
     }
+
+    const openingFamily = searchParams.get('opening_family')
+    if (openingFamily) {
+      query = query.ilike('opening_name', `${openingFamily}%`)
+    }
     
     if (filters.date_from) {
       query = query.gte('played_at', filters.date_from)

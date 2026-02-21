@@ -19,9 +19,9 @@ export default function ChessPosition({ fen, moveSan, evalDelta, className = '' 
     const rows = boardPart.split('/')
     const board: (string | null)[][] = []
     
-    for (let row of rows) {
+    for (const row of rows) {
       const boardRow: (string | null)[] = []
-      for (let char of row) {
+      for (const char of row) {
         if (isNaN(Number(char))) {
           boardRow.push(char)
         } else {

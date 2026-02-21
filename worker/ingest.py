@@ -21,6 +21,7 @@ from psycopg2.extras import RealDictCursor
 from engine import get_engine, close_engine
 from chess_insights import ChessInsightsAnalyzer
 from blunder_classifier import classify_move_blunder
+from tactic_analyzer import analyze_best_move_tactic
 
 # Load environment variables
 load_dotenv()
@@ -325,29 +326,55 @@ class ChessComIngester:
             # Determine piece moved before pushing
             piece_moved = self.engine.get_piece_moved(move_san, board)
 
+            # Determine captured piece (if any)
+            captured_piece = None
+            if board.is_capture(move):
+                if board.is_en_passant(move):
+                    captured_piece = 'pawn'
+                else:
+                    captured = board.piece_at(move.to_square)
+                    if captured:
+                        piece_names = {
+                            chess.PAWN: 'pawn',
+                            chess.KNIGHT: 'knight',
+                            chess.BISHOP: 'bishop',
+                            chess.ROOK: 'rook',
+                            chess.QUEEN: 'queen',
+                            chess.KING: 'king'
+                        }
+                        captured_piece = piece_names.get(captured.piece_type)
+
             # Make the move
             board.push(move)
             fen_after = board.fen()
-            
+
             # Check if this move delivered checkmate
             # After a move, if is_checkmate() is True, the opponent is in checkmate
-            # So if user is White and board.turn is now Black and is_checkmate is True, White delivered checkmate
             is_checkmate = board.is_checkmate()
+            is_stalemate = board.is_stalemate()
+
+            # Determine if user delivered checkmate
+            # board.turn is now the side that's in checkmate (they can't move)
             if is_checkmate:
-                # Check if the user delivered checkmate (opponent is in checkmate)
-                if is_white:
-                    # User is White - if Black is in checkmate (board.turn would be Black), White delivered it
-                    delivers_checkmate = board.turn == chess.BLACK
-                else:
-                    # User is Black - if White is in checkmate (board.turn would be White), Black delivered it
-                    delivers_checkmate = board.turn == chess.WHITE
+                white_won = board.turn == chess.BLACK  # Black is checkmated = White won
+                delivers_checkmate = (is_white and white_won) or (not is_white and not white_won)
             else:
                 delivers_checkmate = False
-            
-            # Analyze position after move with best move (like Chess.com)
-            # This gives us better evaluation and helps detect mate threats
-            analysis_result = self.engine.analyze_position_with_best_move(fen_after)
-            eval_after = analysis_result.get('eval', 0)
+
+            # For terminal positions, set eval directly instead of asking engine
+            if is_checkmate:
+                # The side that just moved won
+                white_won = board.turn == chess.BLACK
+                eval_after = 10000 if white_won else -10000  # White-centric eval
+                analysis_result = {'eval': eval_after, 'best_move': None}
+            elif is_stalemate:
+                eval_after = 0  # Draw
+                analysis_result = {'eval': 0, 'best_move': None}
+            else:
+                # Analyze position after move with best move (like Chess.com)
+                # This gives us better evaluation and helps detect mate threats
+                analysis_result = self.engine.analyze_position_with_best_move(fen_after)
+                eval_after = analysis_result.get('eval', 0)
             
             # Check if the move allows the opponent to deliver checkmate
             # Use deeper analysis to find mate threats (like Chess.com)
@@ -432,7 +459,12 @@ class ChessComIngester:
                         classification = 'blunder'
                     else:
                         classification = self.engine.classify_move(eval_delta)
-            
+
+            # Override: if the played move is the engine's best move, it's always good
+            # This handles forced moves (only one legal move) or when the player found the best move
+            if best_move_uci_before and move_uci == best_move_uci_before:
+                classification = 'good'
+
             # Determine phase
             phase = self.engine.get_phase(ply)
             
@@ -442,7 +474,7 @@ class ChessComIngester:
             # Classify blunder category for mistakes and blunders
             blunder_category = None
             blunder_details = None
-            if classification in ('mistake', 'blunder'):
+            if classification in ('inaccuracy', 'mistake', 'blunder'):
                 try:
                     blunder_result = classify_move_blunder(
                         position_fen=fen_before,
@@ -460,6 +492,16 @@ class ChessComIngester:
                         'explanation': blunder_result['explanation'],
                         **blunder_result['details']
                     }
+
+                    # Analyze the best move for missed tactics
+                    if best_move_uci_before:
+                        tactic_info = analyze_best_move_tactic(fen_before, best_move_uci_before)
+                        if tactic_info:
+                            blunder_details['missed_tactic_type'] = tactic_info['tactic_type']
+                            blunder_details['missed_tactic_description'] = tactic_info['description']
+                            blunder_details['missed_tactic_squares'] = tactic_info['squares_involved']
+                            if tactic_info.get('piece_sacrificed'):
+                                blunder_details['missed_tactic_sacrifice'] = tactic_info['piece_sacrificed']
                 except Exception as e:
                     print(f"Error classifying blunder at ply {ply}: {e}")
 
@@ -486,6 +528,7 @@ class ChessComIngester:
                 'piece_moved': piece_moved,
                 'phase': phase,
                 'position_fen': fen_after,
+                'position_fen_before': fen_before,
                 'tactical_motifs': insights['tactical_motifs'],
                 'positional_patterns': insights['positional_patterns'],
                 'recommendations': insights['recommendations'],
@@ -493,7 +536,8 @@ class ChessComIngester:
                 'blunder_category': blunder_category,
                 'blunder_details': blunder_details,
                 'best_move_san': best_move_san,
-                'best_move_uci': best_move_uci_before
+                'best_move_uci': best_move_uci_before,
+                'captured_piece': captured_piece
             }
             
             moves_data.append(move_data)
@@ -569,8 +613,8 @@ class ChessComIngester:
                                          eval_delta, classification, piece_moved, phase, position_fen,
                                          tactical_motifs, positional_patterns, recommendations, move_quality,
                                          engine_config_hash, blunder_category, blunder_details,
-                                         best_move_san, best_move_uci)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                         best_move_san, best_move_uci, captured_piece, position_fen_before)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (game_id, ply, engine_config_hash) DO NOTHING
                     """, (
                         game_id,
@@ -592,7 +636,9 @@ class ChessComIngester:
                         move_data.get('blunder_category'),
                         json.dumps(move_data['blunder_details']) if move_data.get('blunder_details') else None,
                         move_data.get('best_move_san'),
-                        move_data.get('best_move_uci')
+                        move_data.get('best_move_uci'),
+                        move_data.get('captured_piece'),
+                        move_data.get('position_fen_before')
                     ))
                 
                 self.db_conn.commit()

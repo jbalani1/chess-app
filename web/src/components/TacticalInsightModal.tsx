@@ -1,7 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ChessBoard from './ChessBoard'
+
+interface MotifPattern {
+  description: string
+  severity: string
+  piece_involved?: string
+  recommendation?: string
+}
 
 interface GameMove {
   moveId: string
@@ -11,7 +18,8 @@ interface GameMove {
   evalDelta: number
   classification: string
   positionFen: string
-  motifs: any[]
+  motifs?: MotifPattern[]
+  patterns?: MotifPattern[]
   pinnedPiece?: string | null
   game: {
     id: string
@@ -46,21 +54,15 @@ export default function TacticalInsightModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (isOpen && motifType) {
-      fetchGames()
-    }
-  }, [isOpen, motifType])
-
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     setLoading(true)
     setError(null)
-    
+
     try {
-      const endpoint = isPositional 
+      const endpoint = isPositional
         ? `/api/insights/positional/${motifType}/games`
         : `/api/insights/tactical/${motifType}/games`
-      
+
       const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch games')
@@ -69,7 +71,7 @@ export default function TacticalInsightModal({
       if (Array.isArray(data)) {
         // Backward compat if API returned array
         setGames(data)
-        setTotals({ positions: data.length, games: new Set(data.map((d: any) => d.game?.id)).size })
+        setTotals({ positions: data.length, games: new Set(data.map((d: GameMove) => d.game?.id)).size })
       } else {
         setGames(data.items || [])
         setTotals(data.totals || null)
@@ -79,7 +81,13 @@ export default function TacticalInsightModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [isPositional, motifType])
+
+  useEffect(() => {
+    if (isOpen && motifType) {
+      fetchGames()
+    }
+  }, [isOpen, motifType, fetchGames])
 
   // Convert FEN board field + UCI move into a board-only string after the move.
   // This is a minimal applicator sufficient for typical insight screenshots.
@@ -164,24 +172,24 @@ export default function TacticalInsightModal({
 
   const getClassificationColor = (classification: string) => {
     switch (classification) {
-      case 'blunder': return 'bg-red-100 text-red-800 border-red-200'
-      case 'mistake': return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'inaccuracy': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'good': return 'bg-green-100 text-green-800 border-green-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'blunder': return 'bg-red-500/20 text-red-400 border-red-500/30'
+      case 'mistake': return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      case 'inaccuracy': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+      case 'good': return 'bg-green-500/20 text-green-400 border-green-500/30'
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-[var(--bg-secondary)] rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden border border-[var(--border-color)]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--border-color)]">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{description}</h2>
-            <p className="text-gray-600 mt-1">
+            <h2 className="text-2xl font-bold text-[var(--text-primary)]">{description}</h2>
+            <p className="text-[var(--text-secondary)] mt-1">
               {totals ? (
                 <>Found in {totals.positions} positions across {totals.games} games</>
               ) : (
@@ -191,7 +199,7 @@ export default function TacticalInsightModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-2xl transition-colors"
           >
             ×
           </button>
@@ -201,78 +209,78 @@ export default function TacticalInsightModal({
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {loading && (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading games...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-primary)] mx-auto"></div>
+              <p className="mt-2 text-[var(--text-secondary)]">Loading games...</p>
             </div>
           )}
 
           {error && (
             <div className="text-center py-8">
-              <div className="text-red-600 mb-2">Error loading games</div>
-              <p className="text-gray-600">{error}</p>
+              <div className="text-[var(--color-blunder)] mb-2">Error loading games</div>
+              <p className="text-[var(--text-secondary)]">{error}</p>
             </div>
           )}
 
           {!loading && !error && games.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-600">No games found with this tactical pattern</p>
+              <p className="text-[var(--text-muted)]">No games found with this tactical pattern</p>
             </div>
           )}
 
           {!loading && !error && games.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {games.map((gameMove, index) => (
-                <div key={gameMove.moveId} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              {games.map((gameMove) => (
+                <div key={gameMove.moveId} className="card p-4 hover:border-[var(--accent-primary)]/50 transition-all">
                   {/* Game Info */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-lg">
+                      <h3 className="font-semibold text-lg text-[var(--text-primary)]">
                         {gameMove.game.whitePlayer} vs {gameMove.game.blackPlayer}
                       </h3>
                       <span className={`px-2 py-1 rounded-full text-xs border ${getClassificationColor(gameMove.classification)}`}>
                         {gameMove.classification}
                       </span>
                     </div>
-                    
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p><strong>Date:</strong> {formatDate(gameMove.game.playedAt)}</p>
-                      <p><strong>Opening:</strong> {gameMove.game.openingName} ({gameMove.game.eco})</p>
-                      <p><strong>Result:</strong> {gameMove.game.result}</p>
-                      <p><strong>Move:</strong> {gameMove.ply % 2 === 0 ? Math.floor(gameMove.ply / 2) + 1 + '.' : ''}{gameMove.moveSan}</p>
+
+                    <div className="text-sm text-[var(--text-secondary)] space-y-1">
+                      <p><span className="text-[var(--text-muted)]">Date:</span> {formatDate(gameMove.game.playedAt)}</p>
+                      <p><span className="text-[var(--text-muted)]">Opening:</span> {gameMove.game.openingName} ({gameMove.game.eco})</p>
+                      <p><span className="text-[var(--text-muted)]">Result:</span> {gameMove.game.result}</p>
+                      <p><span className="text-[var(--text-muted)]">Move:</span> {gameMove.ply % 2 === 0 ? Math.floor(gameMove.ply / 2) + 1 + '.' : ''}{gameMove.moveSan}</p>
                     </div>
                   </div>
 
                   {/* Chess Position (after the actual move) */}
-                  <div className="mb-4">
-                    <ChessBoard 
+                  <div className="mb-4 bg-[var(--bg-tertiary)] p-3 rounded-lg">
+                    <ChessBoard
                       fen={`${applyUciToBoard(gameMove.positionFen.split(' ')[0], gameMove.moveUci)} ${gameMove.positionFen.split(' ')[1] || 'w'} - - 0 1`}
-                      width={360}
+                      width={400}
                       showCoordinates={true}
                     />
                   </div>
 
                   {/* Motif/Pattern Details */}
                   {(gameMove.motifs || gameMove.patterns || []).map((item, itemIndex) => (
-                    <div key={itemIndex} className="bg-blue-50 rounded p-3">
-                      <p className="text-sm font-medium text-blue-900">{item.description}</p>
-                      <p className="text-xs text-blue-700 mt-1">
+                    <div key={itemIndex} className="bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 rounded p-3">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{item.description}</p>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
                         Severity: {item.severity}
                         {item.piece_involved && ` • Piece: ${item.piece_involved}`}
                         {gameMove.pinnedPiece && ` • Pinned: ${gameMove.pinnedPiece}`}
                         {item.recommendation && (
-                          <div className="mt-2">
-                            <strong>Recommendation:</strong> {item.recommendation}
-                          </div>
+                          <span className="block mt-2">
+                            <span className="font-medium">Recommendation:</span> {item.recommendation}
+                          </span>
                         )}
                       </p>
                     </div>
                   ))}
 
                   {/* Game Link */}
-                  <div className="mt-4 pt-3 border-t">
+                  <div className="mt-4 pt-3 border-t border-[var(--border-color)]">
                     <a
                       href={`/games/${gameMove.game.id}`}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)] text-sm font-medium"
                     >
                       View Full Game Analysis →
                     </a>

@@ -50,7 +50,7 @@ class ChessEngine:
             'hash_mb': int(os.getenv('STOCKFISH_HASH', '512')),  # More hash for better analysis
             'multi_pv': int(os.getenv('STOCKFISH_MULTI_PV', '3')),  # Find top 3 moves like Chess.com
             'move_time_ms': int(os.getenv('STOCKFISH_MOVE_TIME_MS', '1000')),  # 1 second default
-            'depth': int(os.getenv('STOCKFISH_DEPTH', '18')),  # Depth-based analysis (Chess.com uses 15-20+)
+            'depth': int(os.getenv('STOCKFISH_DEPTH', '22')),  # Depth 22 matches Chess.com's sweet spot (low 20s)
             'use_depth': os.getenv('STOCKFISH_USE_DEPTH', 'true').lower() == 'true',  # Use depth instead of time
         }
     

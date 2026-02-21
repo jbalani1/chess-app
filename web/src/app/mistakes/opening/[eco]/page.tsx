@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, use, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import ChessBoard from '@/components/ChessBoard'
-import { Move, MoveClassification, getEffectiveClassification, isCheckmate } from '@/lib/types'
+import Breadcrumbs from '@/components/layout/Breadcrumbs'
+import { Move, getEffectiveClassification, isCheckmate } from '@/lib/types'
 
 interface Game {
   id: string
@@ -31,10 +32,10 @@ interface OpeningData {
 type ClassificationFilter = 'all' | 'inaccuracy' | 'mistake' | 'blunder'
 
 const classificationColors = {
-  good: 'bg-green-100 text-green-800 border-green-300',
-  inaccuracy: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  mistake: 'bg-orange-100 text-orange-800 border-orange-300',
-  blunder: 'bg-red-100 text-red-800 border-red-300',
+  good: 'bg-green-500/20 text-green-400 border-green-500/30',
+  inaccuracy: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  mistake: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  blunder: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
 
 export default function OpeningDetailPage({ params }: { params: Promise<{ eco: string }> }) {
@@ -115,13 +116,13 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-8 bg-[var(--bg-tertiary)] rounded w-1/3"></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="h-96 bg-gray-200 rounded"></div>
-              <div className="h-96 bg-gray-200 rounded"></div>
+              <div className="h-96 bg-[var(--bg-tertiary)] rounded"></div>
+              <div className="h-96 bg-[var(--bg-tertiary)] rounded"></div>
             </div>
           </div>
         </div>
@@ -130,49 +131,47 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
-          <a href="/mistakes/opening" className="text-blue-600 hover:text-blue-800 text-sm">
-            ← Back to Opening Analysis
-          </a>
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">
+          <Breadcrumbs items={[{ label: 'Mistakes', href: '/mistakes' }, { label: 'By Opening', href: '/mistakes?tab=opening' }, { label: data?.opening_name || eco }]} />
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mt-2">
             {data?.opening_name || eco}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-[var(--text-secondary)]">
             ECO: {eco} • {data?.total_games || 0} games • {data?.total_mistakes || 0} mistakes
             {colorParam && ` • Playing as ${colorParam}`}
           </p>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="card p-4 mb-6">
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">From Date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
+                className="border border-[var(--border-color)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">To Date</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
+                className="border border-[var(--border-color)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Classification</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Classification</label>
               <select
                 value={classificationFilter}
                 onChange={(e) => setClassificationFilter(e.target.value as ClassificationFilter)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white"
+                className="border border-[var(--border-color)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] bg-[var(--bg-tertiary)]"
               >
                 <option value="all">All Mistakes</option>
                 <option value="inaccuracy">Inaccuracies</option>
@@ -183,7 +182,7 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
             {(startDate || endDate) && (
               <button
                 onClick={() => { setStartDate(''); setEndDate(''); }}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)]"
               >
                 Clear dates
               </button>
@@ -192,7 +191,7 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 mb-6">
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-400 mb-6">
             {error}
           </div>
         )}
@@ -200,19 +199,23 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Chess Board */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Position</h2>
+          <div className="card p-4">
+            <h2 className="text-lg font-medium text-[var(--text-primary)] mb-4">Position</h2>
             {selectedMove ? (
               <>
-                <ChessBoard
-                  fen={selectedMove.position_fen}
-                  width={400}
-                  orientation={getBoardOrientation()}
-                />
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="bg-[var(--bg-secondary)] p-4 rounded-lg">
+                  <ChessBoard
+                    fen={selectedMove.position_fen}
+                    orientation={getBoardOrientation()}
+                  />
+                </div>
+                <div className="mt-4 p-4 bg-[var(--bg-tertiary)] rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-mono text-lg">
                       {getMoveNumber(selectedMove.ply)} {selectedMove.move_san}
+                      {selectedMove.captured_piece && (
+                        <span className="text-[var(--text-secondary)] text-base font-normal"> (takes {selectedMove.captured_piece})</span>
+                      )}
                     </span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
                       classificationColors[getEffectiveClassification(selectedMove)]
@@ -220,22 +223,29 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
                       {isCheckmate(selectedMove) ? 'Checkmate' : selectedMove.classification}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600">
+                  {selectedMove.best_move_san && selectedMove.best_move_san !== selectedMove.move_san && (
+                    <div className="mb-3 p-2 bg-green-500/20 border border-green-500/30 rounded">
+                      <span className="text-sm text-green-400">
+                        Better move: <span className="font-mono font-bold">{selectedMove.best_move_san}</span>
+                      </span>
+                    </div>
+                  )}
+                  <div className="text-sm text-[var(--text-secondary)]">
                     <p>Eval: {(selectedMove.eval_after / 100).toFixed(2)}</p>
                     <p>Eval change: {(selectedMove.eval_delta / 100).toFixed(2)}</p>
                     <p>Phase: {selectedMove.phase}</p>
                   </div>
                   {selectedGame && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
+                    <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                      <p className="text-sm text-[var(--text-secondary)]">
                         {selectedGame.white_player} vs {selectedGame.black_player}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-[var(--text-muted)]">
                         {formatDate(selectedGame.played_at)} • {selectedGame.result}
                       </p>
                       <a
                         href={`/games/${selectedGame.id}?move=${selectedMove.id}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block"
+                        className="text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)] text-sm mt-2 inline-block"
                       >
                         View full game →
                       </a>
@@ -244,47 +254,47 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
-                <p className="text-gray-500">Select a mistake to view the position</p>
+              <div className="flex items-center justify-center h-96 bg-[var(--bg-tertiary)] rounded-lg">
+                <p className="text-[var(--text-muted)]">Select a mistake to view the position</p>
               </div>
             )}
           </div>
 
           {/* Mistakes List */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">
+          <div className="card">
+            <div className="px-4 py-3 border-b border-[var(--border-color)]">
+              <h2 className="text-lg font-medium text-[var(--text-primary)]">
                 Mistakes in {data?.opening_name || eco}
               </h2>
             </div>
             <div className="max-h-[600px] overflow-y-auto">
               {data?.games && data.games.length > 0 ? (
                 data.games.map((game) => (
-                  <div key={game.id} className="border-b border-gray-100">
+                  <div key={game.id} className="border-b border-[var(--divider-color)]">
                     {/* Game Header */}
-                    <div className="px-4 py-3 bg-gray-50">
+                    <div className="px-4 py-3 bg-[var(--bg-tertiary)]">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-gray-900 text-sm">
+                          <p className="font-medium text-[var(--text-primary)] text-sm">
                             {game.white_player} vs {game.black_player}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-[var(--text-muted)]">
                             {formatDate(game.played_at)} • {game.time_control} • {game.result}
                           </p>
                         </div>
                         <div className="flex gap-2">
                           {game.blunder_count > 0 && (
-                            <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs">
+                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">
                               {game.blunder_count} blunder{game.blunder_count > 1 ? 's' : ''}
                             </span>
                           )}
                           {game.mistake_count > 0 && (
-                            <span className="px-2 py-0.5 bg-orange-100 text-orange-800 rounded text-xs">
+                            <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs">
                               {game.mistake_count} mistake{game.mistake_count > 1 ? 's' : ''}
                             </span>
                           )}
                           {game.inaccuracy_count > 0 && (
-                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">
+                            <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs">
                               {game.inaccuracy_count} inaccuracy
                             </span>
                           )}
@@ -301,22 +311,30 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
                             onClick={() => handleMoveClick(game, move)}
                             className={`w-full text-left p-3 rounded-lg border transition-all ${
                               selectedMove?.id === move.id
-                                ? 'ring-2 ring-blue-500 ' + classificationColors[getEffectiveClassification(move)]
-                                : classificationColors[getEffectiveClassification(move)] + ' hover:shadow-md'
+                                ? 'ring-2 ring-[var(--accent-primary)] ' + classificationColors[getEffectiveClassification(move)]
+                                : classificationColors[getEffectiveClassification(move)] + ' hover:bg-[var(--bg-hover)]'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <span className="font-mono font-medium">
                                   {getMoveNumber(move.ply)} {move.move_san}
+                                  {move.captured_piece && (
+                                    <span className="text-[var(--text-muted)] font-normal"> (takes {move.captured_piece})</span>
+                                  )}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  {move.piece_moved} • {move.phase}
-                                </span>
+                                {move.best_move_san && move.best_move_san !== move.move_san && (
+                                  <span className="text-xs font-medium text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded">
+                                    Better: {move.best_move_san}
+                                  </span>
+                                )}
                               </div>
-                              <div className="text-right">
+                              <div className="text-right flex items-center gap-3">
+                                <span className="text-xs text-[var(--text-secondary)] font-medium">
+                                  {formatDate(game.played_at)}
+                                </span>
                                 <span className={`text-sm font-medium ${
-                                  move.eval_delta < 0 ? 'text-red-600' : 'text-green-600'
+                                  move.eval_delta < 0 ? 'text-red-400' : 'text-green-400'
                                 }`}>
                                   {move.eval_delta > 0 ? '+' : ''}{(move.eval_delta / 100).toFixed(1)}
                                 </span>
@@ -325,13 +343,13 @@ export default function OpeningDetailPage({ params }: { params: Promise<{ eco: s
                           </button>
                         ))
                       ) : (
-                        <p className="text-gray-500 text-sm py-2">No mistakes in this game</p>
+                        <p className="text-[var(--text-muted)] text-sm py-2">No mistakes in this game</p>
                       )}
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-gray-500">
+                <div className="p-8 text-center text-[var(--text-muted)]">
                   No games found with this opening and the selected filters.
                 </div>
               )}

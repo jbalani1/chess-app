@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+interface PositionalPattern {
+  pattern_type: string
+  description: string
+  severity: string
+  piece_involved?: string
+  recommendation?: string
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ patternType: string }> }
@@ -41,8 +49,17 @@ export async function GET(
     // Process the data to extract specific pattern instances
     const processedGames = games?.map(move => {
       const patterns = move.positional_patterns || []
-      const relevantPatterns = patterns.filter((pattern: any) => pattern.pattern_type === patternType)
-      
+      const relevantPatterns = patterns.filter((pattern: PositionalPattern) => pattern.pattern_type === patternType)
+      const game = move.games as unknown as {
+        id: string
+        white_player: string
+        black_player: string
+        played_at: string
+        result: string
+        opening_name: string
+        eco: string
+      }
+
       return {
         moveId: move.id,
         ply: move.ply,
@@ -53,13 +70,13 @@ export async function GET(
         positionFen: move.position_fen,
         patterns: relevantPatterns,
         game: {
-          id: move.games.id,
-          whitePlayer: move.games.white_player,
-          blackPlayer: move.games.black_player,
-          playedAt: move.games.played_at,
-          result: move.games.result,
-          openingName: move.games.opening_name,
-          eco: move.games.eco
+          id: game.id,
+          whitePlayer: game.white_player,
+          blackPlayer: game.black_player,
+          playedAt: game.played_at,
+          result: game.result,
+          openingName: game.opening_name,
+          eco: game.eco
         }
       }
     }) || []
