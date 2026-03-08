@@ -14,7 +14,9 @@ export async function GET(request: Request) {
   const view = searchParams.get('view') // 'browse' for family-grouped view
 
   if (view === 'browse') {
-    return handleBrowseView(username, color)
+    const dateFrom = searchParams.get('date_from')
+    const dateTo = searchParams.get('date_to')
+    return handleBrowseView(username, color, dateFrom, dateTo)
   }
 
   try {
@@ -148,7 +150,7 @@ export async function GET(request: Request) {
   }
 }
 
-async function handleBrowseView(username: string, color: string | null) {
+async function handleBrowseView(username: string, color: string | null, dateFrom: string | null, dateTo: string | null) {
   try {
     let query = supabase
       .from('games')
@@ -159,6 +161,13 @@ async function handleBrowseView(username: string, color: string | null) {
       query = query.ilike('white_player', username)
     } else if (color === 'black') {
       query = query.ilike('black_player', username)
+    }
+
+    if (dateFrom) {
+      query = query.gte('played_at', dateFrom)
+    }
+    if (dateTo) {
+      query = query.lte('played_at', dateTo)
     }
 
     const { data: games, error } = await query

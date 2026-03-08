@@ -43,9 +43,15 @@ export async function GET(request: NextRequest) {
     if (filters.date_from) {
       query = query.gte('played_at', filters.date_from)
     }
-    
+
     if (filters.date_to) {
       query = query.lte('played_at', filters.date_to)
+    }
+
+    const color = searchParams.get('color')
+    if (color === 'white' || color === 'black') {
+      const playerCol = color === 'white' ? 'white_player' : 'black_player'
+      query = query.ilike(playerCol, filters.username || process.env.CHESS_COM_USERNAME || '')
     }
     
     const { data: games, error } = await query

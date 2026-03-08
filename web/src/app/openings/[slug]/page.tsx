@@ -1,35 +1,43 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { slugToOpeningName } from '@/lib/openings'
 import { Game } from '@/lib/types'
+import { useGlobalFilters } from '@/contexts/FilterContext'
 
 export default function OpeningDetailPage() {
   const params = useParams()
   const slug = params.slug as string
   const openingName = slugToOpeningName(slug)
+  const { dateFrom, dateTo, timeControl, color } = useGlobalFilters()
 
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetched = useRef(false)
 
   const fetchGames = useCallback(async () => {
-    setLoading(true)
+    if (!hasFetched.current) setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({ opening_family: openingName })
+      if (dateFrom) params.set('date_from', dateFrom)
+      if (dateTo) params.set('date_to', dateTo)
+      if (timeControl) params.set('time_control', timeControl)
+      if (color !== 'all') params.set('color', color)
       const res = await fetch(`/api/games?${params}`)
       if (!res.ok) throw new Error('Failed to fetch games')
       const data = await res.json()
       setGames(data.games || [])
+      hasFetched.current = true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }, [openingName])
+  }, [openingName, dateFrom, dateTo, timeControl, color])
 
   useEffect(() => {
     fetchGames()
@@ -78,7 +86,7 @@ export default function OpeningDetailPage() {
     return isUserWhite(game) ? game.black_player : game.white_player
   }
 
-  if (loading) {
+  if (loading && !hasFetched.current) {
     return (
       <div className="max-w-5xl mx-auto animate-fadeIn">
         <div className="animate-pulse space-y-4">

@@ -267,6 +267,37 @@ export interface MoveChoice {
   game_instances: { game_id: string; move_id: string; played_at: string; eval_delta: number }[]
 }
 
+// Pattern-based recurring mistakes
+export interface PatternExample {
+  fen: string
+  move_san: string
+  best_move_san: string | null
+  eval_delta: number
+  explanation: string | null
+  game_id: string
+  move_id: string
+  played_at: string
+  opening_name: string
+  piece_moved: string
+}
+
+export interface PatternGroup {
+  blunder_category: BlunderCategory
+  phase: GamePhase
+  count: number
+  avg_eval_loss: number
+  recent_count: number
+  older_count: number
+  trend: 'improving' | 'stable' | 'worsening'
+  piece_breakdown: { piece: string; count: number }[]
+  examples: PatternExample[]
+  label: string
+  description: string
+  icon: string
+  recommendation: string
+  recency_score: number
+}
+
 // Helper to check if a move is checkmate
 export function isCheckmate(move: Move): boolean {
   return move.move_san.endsWith('#')

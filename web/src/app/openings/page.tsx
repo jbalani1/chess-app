@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { openingToSlug } from '@/lib/openings'
+import { useGlobalFilters } from '@/contexts/FilterContext'
 
 interface OpeningFamily {
   base_name: string
@@ -17,31 +18,35 @@ interface OpeningFamily {
 }
 
 type SortKey = 'games' | 'winrate' | 'name' | 'recent'
-type ColorFilter = 'all' | 'white' | 'black'
 
 export default function OpeningsPage() {
   const [openings, setOpenings] = useState<OpeningFamily[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [colorFilter, setColorFilter] = useState<ColorFilter>('all')
   const [sortBy, setSortBy] = useState<SortKey>('games')
+  const { dateFrom, dateTo, timeControl, color } = useGlobalFilters()
+  const hasFetched = useRef(false)
 
   const fetchOpenings = useCallback(async () => {
-    setLoading(true)
+    // Only show full skeleton on first load
+    if (!hasFetched.current) setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({ view: 'browse' })
-      if (colorFilter !== 'all') params.set('color', colorFilter)
+      if (dateFrom) params.set('date_from', dateFrom)
+      if (dateTo) params.set('date_to', dateTo)
+      if (color !== 'all') params.set('color', color)
       const res = await fetch(`/api/openings?${params}`)
       if (!res.ok) throw new Error('Failed to fetch openings')
       const data = await res.json()
       setOpenings(data)
+      hasFetched.current = true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }, [colorFilter])
+  }, [dateFrom, dateTo, color])
 
   useEffect(() => {
     fetchOpenings()
@@ -57,7 +62,7 @@ export default function OpeningsPage() {
     }
   })
 
-  if (loading) {
+  if (loading && !hasFetched.current) {
     return (
       <div className="max-w-6xl mx-auto animate-fadeIn">
         <div className="animate-pulse space-y-4">
@@ -86,27 +91,9 @@ export default function OpeningsPage() {
         </p>
       </div>
 
-      {/* Filters */}
+      {/* Sort control */}
       <div className="card p-5 mb-6">
         <div className="flex flex-wrap gap-4 items-center">
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Color</label>
-            <div className="flex rounded-lg overflow-hidden border border-[var(--border-color)]">
-              {(['all', 'white', 'black'] as ColorFilter[]).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColorFilter(c)}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    colorFilter === c
-                      ? 'bg-[var(--accent-primary)] text-white'
-                      : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                  }`}
-                >
-                  {c === 'all' ? 'All' : c === 'white' ? 'White' : 'Black'}
-                </button>
-              ))}
-            </div>
-          </div>
           <div>
             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Sort by</label>
             <select

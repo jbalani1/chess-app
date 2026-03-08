@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import time
+import re
 import requests
 import io
 import argparse
@@ -59,6 +60,43 @@ class ChessComIngester:
             print(f"Error connecting to database: {e}")
             raise
     
+    # ECO code to opening name fallback mapping
+    ECO_MAP = {
+        'A00': 'Uncommon Opening', 'A10': 'English Opening', 'A20': 'English Opening',
+        'A30': 'English Opening', 'A40': 'Queen Pawn Game', 'A45': 'Trompowsky Attack',
+        'A50': 'Indian Defense', 'A80': 'Dutch Defense',
+        'B00': 'Uncommon King Pawn', 'B01': 'Scandinavian Defense',
+        'B06': 'Modern Defense', 'B07': 'Pirc Defense',
+        'B10': 'Caro-Kann Defense', 'B12': 'Caro-Kann Defense',
+        'B20': 'Sicilian Defense', 'B30': 'Sicilian Defense',
+        'B40': 'Sicilian Defense', 'B50': 'Sicilian Defense',
+        'B60': 'Sicilian Najdorf', 'B70': 'Sicilian Dragon',
+        'B80': 'Sicilian Scheveningen', 'B90': 'Sicilian Najdorf',
+        'C00': 'French Defense', 'C20': 'King Pawn Game',
+        'C28': 'Vienna Game', 'C40': 'King Knight Opening',
+        'C41': 'Philidor Defense', 'C42': 'Petrov Defense',
+        'C44': 'Scotch Game', 'C45': 'Scotch Game',
+        'C47': 'Four Knights Game', 'C50': 'Italian Game',
+        'C53': 'Italian Game', 'C54': 'Italian Game', 'C55': 'Italian Game',
+        'C60': 'Ruy Lopez', 'C68': 'Ruy Lopez',
+        'D00': 'Queen Pawn Game', 'D02': 'London System',
+        'D10': 'Slav Defense', 'D30': "Queen's Gambit Declined",
+        'D50': "Queen's Gambit Declined", 'D70': 'Grunfeld Defense',
+        'D80': 'Grunfeld Defense',
+        'E00': 'Catalan Opening', 'E10': 'Indian Defense',
+        'E20': 'Nimzo-Indian Defense', 'E60': "King's Indian Defense",
+        'E70': "King's Indian Defense", 'E90': "King's Indian Defense",
+    }
+
+    def _opening_name_from_eco(self, eco: str) -> str:
+        """Look up opening name from ECO code, matching most specific prefix first."""
+        # Try exact match (e.g. C55), then 2-char (C5), then 1-char (C)
+        for length in (len(eco), 2, 1):
+            prefix = eco[:length]
+            if prefix in self.ECO_MAP:
+                return self.ECO_MAP[prefix]
+        return ''
+
     def fetch_games_for_month(self, username: str, year: int, month: int) -> List[Dict[str, Any]]:
         """
         Fetch all games for a user for a specific month
@@ -253,13 +291,26 @@ class ChessComIngester:
         # Parse ECO and opening
         eco = headers.get('ECO', '')
         opening = headers.get('Opening', '')
-        
-        # If opening is empty, try to extract from PGN or use a default
+
+        # If opening is empty, try ECOUrl (Chess.com provides this instead of Opening)
         if not opening:
-            # Try to get opening from other headers
+            eco_url = headers.get('ECOUrl', '')
+            if eco_url:
+                # e.g. https://www.chess.com/openings/Italian-Game-Giuoco-Pianissimo-4...d6
+                path = eco_url.rstrip('/').split('/')[-1]
+                # Remove move-number suffixes like "4...Nf6-5.O-O"
+                path = re.split(r'-\d+\.', path)[0]
+                opening = path.replace('-', ' ').strip()
+
+        # Fallback to other headers or ECO-based name
+        if not opening:
             opening = headers.get('Variation', '') or headers.get('SubVariation', '')
-            if not opening:
-                opening = 'Unknown Opening'
+
+        if not opening and eco:
+            opening = self._opening_name_from_eco(eco)
+
+        if not opening:
+            opening = 'Unknown Opening'
         
         # Parse result
         result = headers.get('Result', '*')

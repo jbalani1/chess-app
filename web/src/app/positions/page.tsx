@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import ChessBoard from '@/components/ChessBoard'
+import { Chess } from 'chess.js'
+import AnalysisBoard from '@/components/AnalysisBoard'
 
 interface PositionMove {
   id: string
@@ -27,23 +28,26 @@ interface CommonPosition {
   good_count: number
 }
 
-const classificationColors = {
-  good: 'bg-green-500 text-white',
-  inaccuracy: 'bg-yellow-500 text-white',
-  mistake: 'bg-orange-500 text-white',
-  blunder: 'bg-red-600 text-white',
+function sanToUci(fen: string, san: string): { from: string; to: string } | null {
+  try {
+    const chess = new Chess(fen)
+    const move = chess.move(san)
+    if (move) return { from: move.from, to: move.to }
+  } catch { /* invalid */ }
+  return null
 }
-
 
 export default function CommonPositionsPage() {
   const [positions, setPositions] = useState<CommonPosition[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPosition, setSelectedPosition] = useState<CommonPosition | null>(null)
+  const [selectedMoveGroup, setSelectedMoveGroup] = useState<string | null>(null)
   const [minOccurrences, setMinOccurrences] = useState(2)
   const [showOnlyProblems, setShowOnlyProblems] = useState(true)
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [phaseFilter, setPhaseFilter] = useState<string>('all')
+
 
   const fetchPositions = useCallback(async () => {
     setLoading(true)
@@ -67,7 +71,6 @@ export default function CommonPositionsPage() {
     fetchPositions()
   }, [fetchPositions])
 
-  // Calculate date cutoff based on filter
   const getDateCutoff = () => {
     const now = new Date()
     switch (dateFilter) {
@@ -82,14 +85,10 @@ export default function CommonPositionsPage() {
     }
   }
 
-  // Filter positions based on showOnlyProblems and date filter
   const filteredPositions = positions.filter(p => {
-    // Filter by problems
     if (showOnlyProblems && p.mistake_count + p.blunder_count + p.inaccuracy_count === 0) {
       return false
     }
-
-    // Filter by date - check if any mistake/blunder is within the date range
     const dateCutoff = getDateCutoff()
     if (dateCutoff) {
       const hasRecentMistake = p.moves.some(m =>
@@ -98,11 +97,9 @@ export default function CommonPositionsPage() {
       )
       if (!hasRecentMistake) return false
     }
-
     return true
   })
 
-  // Group moves by move_san for the selected position
   const groupedMoves = selectedPosition?.moves.reduce((acc, move) => {
     if (!acc[move.move_san]) {
       acc[move.move_san] = {
@@ -122,7 +119,6 @@ export default function CommonPositionsPage() {
     if (move.best_move_san && move.best_move_san !== move.move_san) {
       acc[move.move_san].best_moves.add(move.best_move_san)
     }
-    // Track most recent mistake/blunder date
     if (move.classification === 'mistake' || move.classification === 'blunder') {
       const current = acc[move.move_san].last_mistake_date
       if (!current || move.played_at > current) {
@@ -141,45 +137,75 @@ export default function CommonPositionsPage() {
   }>) || {}
 
   const sortedGroupedMoves = Object.values(groupedMoves).sort((a, b) => {
-    // Sort by problem severity, then by count
     const aProblems = a.classifications.blunder * 3 + a.classifications.mistake * 2 + a.classifications.inaccuracy
     const bProblems = b.classifications.blunder * 3 + b.classifications.mistake * 2 + b.classifications.inaccuracy
     if (bProblems !== aProblems) return bProblems - aProblems
     return b.count - a.count
   })
 
+  // Auto-select the first problematic move when position changes so arrows show immediately
+  useEffect(() => {
+    if (sortedGroupedMoves.length > 0) {
+      const firstProblem = sortedGroupedMoves.find(g =>
+        g.classifications.blunder + g.classifications.mistake + g.classifications.inaccuracy > 0
+      )
+      setSelectedMoveGroup(firstProblem ? firstProblem.move_san : sortedGroupedMoves[0].move_san)
+    } else {
+      setSelectedMoveGroup(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPosition?.position_fen])
+
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto animate-fadeIn">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-[var(--bg-tertiary)] rounded w-1/3"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="h-96 bg-[var(--bg-tertiary)] rounded"></div>
-            <div className="h-96 bg-[var(--bg-tertiary)] rounded"></div>
+      <div className="max-w-[1400px] mx-auto animate-fadeIn">
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-[var(--bg-tertiary)] rounded-2xl w-1/3"></div>
+          <div className="h-14 bg-[var(--bg-tertiary)] rounded-2xl w-full"></div>
+          <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_280px] gap-5">
+            <div className="h-[500px] bg-[var(--bg-tertiary)] rounded-2xl"></div>
+            <div className="h-[560px] bg-[var(--bg-tertiary)] rounded-2xl"></div>
+            <div className="h-[500px] bg-[var(--bg-tertiary)] rounded-2xl"></div>
           </div>
         </div>
       </div>
     )
   }
 
+  const selectedIndex = selectedPosition
+    ? filteredPositions.findIndex(p => p.position_fen === selectedPosition.position_fen)
+    : -1
+
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn">
+    <div className="max-w-[1400px] mx-auto animate-fadeIn">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/" className="text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)] text-sm">
-          ← Back to Dashboard
+        <Link href="/" className="inline-flex items-center gap-1.5 text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)] text-sm font-medium mb-3">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Dashboard
         </Link>
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mt-2">Common Positions</h1>
-        <p className="text-[var(--text-secondary)] text-lg">
-          Positions you encounter frequently and the moves you make from them
+        <h1 className="text-4xl font-extrabold text-[var(--text-primary)]">Common Positions</h1>
+        <p className="text-[var(--text-secondary)] text-lg mt-1">
+          Positions you see often and how you play them
         </p>
       </div>
 
       {/* Filters */}
       <div className="card p-5 mb-6">
-        <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Filters</h2>
+          {(minOccurrences !== 2 || phaseFilter !== 'all' || dateFilter !== 'all' || !showOnlyProblems) && (
+            <button
+              onClick={() => { setMinOccurrences(2); setPhaseFilter('all'); setDateFilter('all'); setShowOnlyProblems(true) }}
+              className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)]"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Min Occurrences</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Min Games</label>
             <select
               value={minOccurrences}
               onChange={(e) => setMinOccurrences(parseInt(e.target.value))}
@@ -205,7 +231,7 @@ export default function CommonPositionsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Last Mistake</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Recency</label>
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
@@ -217,264 +243,341 @@ export default function CommonPositionsPage() {
               <option value="90days">Last 3 months</option>
             </select>
           </div>
-          <div className="flex items-center">
+          <label className="flex items-center gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
             <input
               type="checkbox"
-              id="showOnlyProblems"
               checked={showOnlyProblems}
               onChange={(e) => setShowOnlyProblems(e.target.checked)}
-              className="h-4 w-4 text-[var(--accent-primary)] rounded border-[var(--border-color)] bg-[var(--bg-tertiary)]"
+              className="h-4 w-4 rounded text-[var(--accent-primary)] border-[var(--border-color)] bg-[var(--bg-tertiary)]"
             />
-            <label htmlFor="showOnlyProblems" className="ml-2 text-sm text-[var(--text-secondary)]">
-              Show only positions with mistakes
-            </label>
-          </div>
+            <span className="text-sm font-medium text-[var(--text-secondary)]">
+              Mistakes only
+            </span>
+          </label>
           <div className="ml-auto text-sm text-[var(--text-muted)]">
-            {filteredPositions.length} positions found
+            {filteredPositions.length} position{filteredPositions.length !== 1 ? 's' : ''} found
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-400 mb-6">
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-red-400 mb-6 text-sm font-medium">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Position List */}
-        <div className="lg:col-span-1 card">
-          <div className="px-4 py-3 border-b border-[var(--border-color)]">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Positions</h2>
+      {/* Main 3-column layout: Positions | Board | Your Moves */}
+      <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_280px] gap-5">
+
+        {/* LEFT — Positions List */}
+        <div className="rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] overflow-hidden xl:order-1 order-2">
+          <div className="px-5 py-4 border-b border-[var(--border-color)]">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">Positions</h2>
           </div>
-          <div className="max-h-[600px] overflow-y-auto">
+          <div className="max-h-[600px] xl:max-h-[calc(100vh-280px)] overflow-y-auto">
             {filteredPositions.length === 0 ? (
-              <div className="p-4 text-[var(--text-muted)] text-center">
-                No common positions found with the current filters.
+              <div className="p-8 text-center text-[var(--text-muted)]">
+                No positions found.
               </div>
             ) : (
-              filteredPositions.map((position, index) => (
-                <button
-                  key={position.position_fen}
-                  onClick={() => setSelectedPosition(position)}
-                  className={`w-full text-left p-4 border-b border-[var(--divider-color)] hover:bg-[var(--bg-hover)] transition-colors ${
-                    selectedPosition?.position_fen === position.position_fen ? 'bg-[var(--accent-primary)]/10 border-l-4 border-l-[var(--accent-primary)]' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-[var(--text-primary)]">
-                      Position #{index + 1}
-                    </span>
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {position.occurrence_count}x
-                    </span>
-                  </div>
-                  <div className="flex gap-1 flex-wrap">
-                    {position.blunder_count > 0 && (
-                      <span className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded text-xs font-medium">
-                        {position.blunder_count} blunder{position.blunder_count > 1 ? 's' : ''}
+              filteredPositions.map((position, index) => {
+                const isSelected = selectedPosition?.position_fen === position.position_fen
+                return (
+                  <button
+                    key={position.position_fen}
+                    onClick={() => setSelectedPosition(position)}
+                    className={`w-full text-left px-5 py-4 border-b border-[var(--divider-color)] transition-all ${
+                      isSelected
+                        ? 'bg-[var(--accent-primary)]/15 border-l-4 border-l-[var(--accent-primary)]'
+                        : 'border-l-4 border-l-transparent hover:bg-[var(--bg-hover)]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className={`text-base font-bold ${isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]'}`}>
+                        Position {index + 1}
                       </span>
-                    )}
-                    {position.mistake_count > 0 && (
-                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs font-medium">
-                        {position.mistake_count} mistake{position.mistake_count > 1 ? 's' : ''}
+                      <span className="text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] px-2.5 py-0.5 rounded-full">
+                        {position.occurrence_count}x
                       </span>
-                    )}
-                    {position.inaccuracy_count > 0 && (
-                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium">
-                        {position.inaccuracy_count} inaccuracy
-                      </span>
-                    )}
-                    {position.good_count > 0 && (
-                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
-                        {position.good_count} good
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {position.blunder_count > 0 && (
+                        <span className="px-2.5 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm font-semibold">
+                          {position.blunder_count} blunder{position.blunder_count > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {position.mistake_count > 0 && (
+                        <span className="px-2.5 py-1 bg-orange-500/20 text-orange-400 rounded-lg text-sm font-semibold">
+                          {position.mistake_count} mistake{position.mistake_count > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {position.inaccuracy_count > 0 && (
+                        <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm font-semibold">
+                          {position.inaccuracy_count} inaccuracy
+                        </span>
+                      )}
+                      {position.good_count > 0 && (
+                        <span className="px-2.5 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm font-semibold">
+                          {position.good_count} good
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
 
-        {/* Selected Position Details */}
-        <div className="lg:col-span-2">
+        {/* CENTER — Chessboard with AnalysisBoard */}
+        <div className="xl:order-2 order-1">
           {selectedPosition ? (
-            <div className="space-y-4">
-              {/* Board + Problematic Moves Side by Side */}
-              <div className="card p-5">
-                <div className="flex flex-col xl:flex-row gap-6">
-                  {/* Chess Board */}
-                  <div className="flex-shrink-0">
-                    <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Position</h2>
-                    {(() => {
-                      // Determine board orientation based on whose turn it is
-                      // The FEN shows whose turn to move - that's the user's color in this position
-                      const fenParts = selectedPosition.position_fen.split(' ')
-                      const sideToMove = fenParts[1] || 'w'
-                      const orientation = sideToMove === 'w' ? 'white' : 'black'
-                      return (
-                        <div className="bg-[var(--bg-tertiary)] p-3 rounded-lg border border-[var(--border-color)]">
-                          <ChessBoard
-                            fen={selectedPosition.position_fen}
-                            width={400}
-                            orientation={orientation}
-                          />
-                        </div>
-                      )
-                    })()}
-                    <div className="mt-3 text-center text-sm text-[var(--text-muted)]">
-                      Seen {selectedPosition.occurrence_count} times
+            <div className="rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] p-6">
+              <div className="flex flex-col items-center">
+                {(() => {
+                  const fenParts = selectedPosition.position_fen.split(' ')
+                  const sideToMove = fenParts[1] || 'w'
+                  const orientation = sideToMove === 'w' ? 'white' : 'black'
+
+                  // Build yourMove and bestMove from selectedMoveGroup
+                  const yourMove = selectedMoveGroup
+                    ? sanToUci(selectedPosition.position_fen, selectedMoveGroup)
+                    : null
+                  const bestMove = (() => {
+                    const group = selectedMoveGroup
+                      ? sortedGroupedMoves.find(g => g.move_san === selectedMoveGroup)
+                      : sortedGroupedMoves.find(g => g.best_moves.size > 0)
+                    if (group && group.best_moves.size > 0) {
+                      return sanToUci(selectedPosition.position_fen, Array.from(group.best_moves)[0])
+                    }
+                    return null
+                  })()
+
+                  // Get SAN names for the hint text
+                  const selectedGroup = selectedMoveGroup
+                    ? sortedGroupedMoves.find(g => g.move_san === selectedMoveGroup)
+                    : null
+                  const bestMoveSan = selectedGroup && selectedGroup.best_moves.size > 0
+                    ? Array.from(selectedGroup.best_moves)[0]
+                    : undefined
+
+                  return (
+                    <div className="w-full max-w-[560px]">
+                      <AnalysisBoard
+                        key={selectedPosition.position_fen + (selectedMoveGroup || '')}
+                        fen={selectedPosition.position_fen}
+                        width={560}
+                        orientation={orientation}
+                        yourMove={yourMove}
+                        bestMove={bestMove}
+                        yourMoveSan={selectedMoveGroup || undefined}
+                        bestMoveSan={bestMoveSan}
+                        showAnalysis={true}
+                        animateMove={false}
+                      />
                     </div>
+                  )
+                })()}
+
+                {/* Stats below board */}
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                  <span className="text-base text-[var(--text-secondary)]">
+                    Seen <strong className="text-[var(--text-primary)]">{selectedPosition.occurrence_count}</strong> times
+                  </span>
+                  {selectedIndex >= 0 && (
+                    <span className="text-sm text-[var(--text-muted)]">
+                      Position {selectedIndex + 1} of {filteredPositions.length}
+                    </span>
+                  )}
+                  {(() => {
+                    const totalMoves = selectedPosition.moves.length
+                    const problemMoves = selectedPosition.mistake_count + selectedPosition.blunder_count + selectedPosition.inaccuracy_count
+                    if (totalMoves === 0) return null
+                    const rate = Math.round((problemMoves / totalMoves) * 100)
+                    return (
+                      <span className={`text-sm font-semibold ${rate > 50 ? 'text-red-400' : rate > 25 ? 'text-orange-400' : 'text-green-400'}`}>
+                        {rate}% mistake rate
+                      </span>
+                    )
+                  })()}
+                </div>
+
+                {/* Prev / Next */}
+                {filteredPositions.length > 1 && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        const idx = selectedIndex > 0 ? selectedIndex - 1 : filteredPositions.length - 1
+                        setSelectedPosition(filteredPositions[idx])
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors text-sm font-medium"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => {
+                        const idx = selectedIndex < filteredPositions.length - 1 ? selectedIndex + 1 : 0
+                        setSelectedPosition(filteredPositions[idx])
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors text-sm font-medium"
+                    >
+                      Next
+                    </button>
                   </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] p-12 text-center text-[var(--text-muted)] text-lg">
+              Select a position from the list to view details
+            </div>
+          )}
+        </div>
 
-                  {/* Problematic Moves - Right beside board */}
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Your Moves</h2>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                      {sortedGroupedMoves.map((group) => {
-                        const hasProblems = group.classifications.blunder + group.classifications.mistake + group.classifications.inaccuracy > 0
-                        const avgEvalDelta = group.total_eval_delta / group.count
+        {/* RIGHT — Your Moves */}
+        <div className="rounded-2xl bg-[var(--bg-tertiary)] border border-[var(--border-color)] overflow-hidden xl:order-3 order-3">
+          <div className="px-5 py-4 border-b border-[var(--border-color)]">
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">
+              Your Moves
+            </h2>
+            {selectedPosition && (
+              <p className="text-base text-[var(--text-secondary)] mt-0.5">
+                {sortedGroupedMoves.length} move{sortedGroupedMoves.length !== 1 ? 's' : ''} played
+              </p>
+            )}
+          </div>
+          <div className="max-h-[600px] xl:max-h-[calc(100vh-280px)] overflow-y-auto">
+            {!selectedPosition ? (
+              <div className="p-8 text-center text-[var(--text-muted)] text-sm">
+                Select a position to see your moves.
+              </div>
+            ) : sortedGroupedMoves.length === 0 ? (
+              <div className="p-8 text-center text-[var(--text-muted)] text-sm">
+                No moves recorded.
+              </div>
+            ) : (
+              <div className="p-3 space-y-3">
+                {sortedGroupedMoves.map((group) => {
+                  const hasProblems = group.classifications.blunder + group.classifications.mistake + group.classifications.inaccuracy > 0
+                  const avgEvalDelta = group.total_eval_delta / group.count
+                  const isSelected = selectedMoveGroup === group.move_san
 
+                  return (
+                    <button
+                      key={group.move_san}
+                      onClick={() => setSelectedMoveGroup(isSelected ? null : group.move_san)}
+                      className={`w-full text-left rounded-xl p-5 border-2 transition-all ${
+                        isSelected
+                          ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 ring-2 ring-[var(--accent-primary)]/30'
+                          : hasProblems
+                            ? 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
+                            : 'border-green-500/30 bg-green-500/5 hover:bg-green-500/10'
+                      }`}
+                    >
+                      {/* Row 1: Move name + avg eval */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-baseline gap-2.5">
+                          <span className="font-mono text-2xl font-extrabold text-white leading-none">
+                            {group.move_san}
+                          </span>
+                          <span className="text-sm font-semibold text-[var(--text-muted)]">
+                            {group.count}x
+                          </span>
+                        </div>
+                        <span className={`font-mono text-xl font-extrabold tabular-nums ${
+                          !hasProblems ? 'text-green-400' :
+                          avgEvalDelta < -200 ? 'text-red-400' :
+                          avgEvalDelta < -100 ? 'text-orange-400' :
+                          avgEvalDelta < -50 ? 'text-yellow-400' : 'text-green-400'
+                        }`}>
+                          {avgEvalDelta > 0 ? '+' : ''}{(avgEvalDelta / 100).toFixed(1)}
+                        </span>
+                      </div>
+
+                      {/* Row 2: Classification badges */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {group.classifications.blunder > 0 && (
+                          <span className="px-2.5 py-1 bg-red-500 text-white rounded-lg text-sm font-bold">
+                            {group.classifications.blunder} blunder{group.classifications.blunder > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {group.classifications.mistake > 0 && (
+                          <span className="px-2.5 py-1 bg-orange-500 text-white rounded-lg text-sm font-bold">
+                            {group.classifications.mistake} mistake{group.classifications.mistake > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {group.classifications.inaccuracy > 0 && (
+                          <span className="px-2.5 py-1 bg-yellow-500 text-yellow-950 rounded-lg text-sm font-bold">
+                            {group.classifications.inaccuracy} inaccuracy
+                          </span>
+                        )}
+                        {group.classifications.good > 0 && (
+                          <span className="px-2.5 py-1 bg-green-500 text-white rounded-lg text-sm font-bold">
+                            {group.classifications.good} good
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Row 3: Best move suggestion — THE KEY TAKEAWAY */}
+                      {hasProblems && group.best_moves.size > 0 && (
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2.5 mb-3">
+                          <span className="text-sm font-semibold text-green-400">Try instead </span>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {Array.from(group.best_moves).slice(0, 2).map((bestMove) => (
+                              <span key={bestMove} className="font-mono text-lg font-extrabold text-green-400 bg-green-500/20 px-3 py-1 rounded-lg">
+                                {bestMove}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Row 4: Eval breakdown + last mistake date */}
+                      {hasProblems && (() => {
+                        const problemMoves = group.moves
+                          .filter(m => m.classification !== 'good')
+                          .sort((a, b) => a.eval_delta - b.eval_delta)
+                        if (problemMoves.length === 0) return null
                         return (
-                          <div
-                            key={group.move_san}
-                            className={`p-3 rounded-lg border ${
-                              hasProblems ? 'border-red-500/30 bg-red-500/10' : 'border-green-500/30 bg-green-500/10'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <span className="font-mono text-lg font-bold text-[var(--text-primary)]">
-                                  {group.move_san}
-                                </span>
-                                <span className="text-xs text-[var(--text-muted)]">
-                                  {group.count}x
-                                </span>
-                                {hasProblems && (
-                                  <span className={`text-sm font-semibold ${
-                                    avgEvalDelta < -200 ? 'text-red-400' :
-                                    avgEvalDelta < -100 ? 'text-orange-400' :
-                                    avgEvalDelta < -50 ? 'text-yellow-400' : 'text-[var(--text-muted)]'
-                                  }`}>
-                                    {avgEvalDelta > 0 ? '+' : ''}{(avgEvalDelta / 100).toFixed(2)} avg
+                          <div className="pt-3 border-t border-[var(--divider-color)]" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-baseline justify-between mb-1.5">
+                              <div className="text-sm text-[var(--text-secondary)]">
+                                Eval: {problemMoves.slice(0, 4).map((m, i) => (
+                                  <span key={m.id}>
+                                    {i > 0 && <span className="text-[var(--text-muted)]"> / </span>}
+                                    <a
+                                      href={`/games/${m.game_id}?move=${m.id}`}
+                                      className={`font-mono font-bold hover:underline ${
+                                        m.classification === 'blunder' ? 'text-red-400' :
+                                        m.classification === 'mistake' ? 'text-orange-400' :
+                                        'text-yellow-400'
+                                      }`}
+                                    >
+                                      {(m.eval_delta / 100).toFixed(1)}
+                                    </a>
                                   </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {group.classifications.blunder > 0 && (
-                                  <span className="px-2 py-0.5 bg-red-600 text-white rounded text-xs font-medium">
-                                    {group.classifications.blunder} blunder{group.classifications.blunder > 1 ? 's' : ''}
-                                  </span>
-                                )}
-                                {group.classifications.mistake > 0 && (
-                                  <span className="px-2 py-0.5 bg-orange-500 text-white rounded text-xs font-medium">
-                                    {group.classifications.mistake} mistake{group.classifications.mistake > 1 ? 's' : ''}
-                                  </span>
-                                )}
-                                {group.classifications.inaccuracy > 0 && (
-                                  <span className="px-2 py-0.5 bg-yellow-500 text-white rounded text-xs font-medium">
-                                    {group.classifications.inaccuracy} inaccuracy
-                                  </span>
-                                )}
-                                {group.classifications.good > 0 && !hasProblems && (
-                                  <span className="px-2 py-0.5 bg-green-500 text-white rounded text-xs font-medium">
-                                    {group.classifications.good} good
-                                  </span>
+                                ))}
+                                {problemMoves.length > 4 && (
+                                  <span className="text-[var(--text-muted)]"> +{problemMoves.length - 4} more</span>
                                 )}
                               </div>
                             </div>
-
-                            {/* Best move suggestion and last mistake date */}
-                            {hasProblems && (
-                              <div className="mt-2 flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
-                                  {group.best_moves.size > 0 && (
-                                    <>
-                                      <span className="text-[var(--text-muted)]">Better:</span>
-                                      {Array.from(group.best_moves).slice(0, 2).map((bestMove) => (
-                                        <span key={bestMove} className="font-mono font-bold text-green-400 bg-green-500/20 px-2 py-0.5 rounded">
-                                          {bestMove}
-                                        </span>
-                                      ))}
-                                    </>
-                                  )}
-                                </div>
-                                {group.last_mistake_date && (
-                                  <span className="text-[var(--text-secondary)] text-sm font-medium">
-                                    Last: {new Date(group.last_mistake_date).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Game links for problematic moves with eval delta */}
-                            {hasProblems && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {group.moves
-                                  .filter(m => m.classification !== 'good')
-                                  .sort((a, b) => a.eval_delta - b.eval_delta)
-                                  .slice(0, 4)
-                                  .map((move) => (
-                                    <a
-                                      key={move.id}
-                                      href={`/games/${move.game_id}?move=${move.id}`}
-                                      className={`px-2 py-1 rounded text-xs font-medium ${classificationColors[move.classification as keyof typeof classificationColors]} hover:opacity-80 transition-opacity`}
-                                    >
-                                      {(move.eval_delta / 100).toFixed(1)} →
-                                    </a>
-                                  ))}
-                                {group.moves.filter(m => m.classification !== 'good').length > 4 && (
-                                  <span className="text-xs text-[var(--text-muted)] self-center">
-                                    +{group.moves.filter(m => m.classification !== 'good').length - 4} more
-                                  </span>
-                                )}
+                            {group.last_mistake_date && (
+                              <div className="mt-1.5">
+                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-400 bg-orange-500/15 px-2.5 py-1 rounded-lg">
+                                  Last mistake: {new Date(group.last_mistake_date).toLocaleDateString()}
+                                </span>
                               </div>
                             )}
                           </div>
                         )
-                      })}
-                    </div>
-                  </div>
-                </div>
+                      })()}
+                    </button>
+                  )
+                })}
               </div>
-
-              {/* Insight - Compact */}
-              {sortedGroupedMoves.length > 0 && (
-                <div className="bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 rounded-lg p-4">
-                  <h3 className="font-semibold text-[var(--accent-primary)] mb-2">Analysis</h3>
-                  <div className="text-sm text-[var(--text-secondary)] flex flex-wrap gap-x-6 gap-y-1">
-                    {(() => {
-                      const totalMoves = selectedPosition.moves.length
-                      const problemMoves = selectedPosition.mistake_count + selectedPosition.blunder_count + selectedPosition.inaccuracy_count
-                      const problemRate = ((problemMoves / totalMoves) * 100).toFixed(0)
-                      const mostPlayedMove = sortedGroupedMoves[0]
-                      const bestMove = [...sortedGroupedMoves].sort((a, b) =>
-                        (b.classifications.good / b.count) - (a.classifications.good / a.count)
-                      )[0]
-
-                      return (
-                        <>
-                          <span>Mistake rate: <strong className="text-[var(--text-primary)]">{problemRate}%</strong></span>
-                          <span>Most played: <strong className="text-[var(--text-primary)]">{mostPlayedMove.move_san}</strong> ({mostPlayedMove.count}x)</span>
-                          {bestMove && bestMove.classifications.good > 0 && (
-                            <span>Best move: <strong className="text-[var(--text-primary)]">{bestMove.move_san}</strong> ({Math.round((bestMove.classifications.good / bestMove.count) * 100)}% good)</span>
-                          )}
-                          {problemMoves > totalMoves * 0.5 && (
-                            <span className="text-red-400 font-medium">Trouble spot - study this!</span>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="card p-8 text-center text-[var(--text-muted)]">
-              Select a position from the list to view details
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
