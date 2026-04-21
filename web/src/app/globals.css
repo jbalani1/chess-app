@@ -241,6 +241,15 @@ a:hover {
   animation: slideIn 0.3s ease-out;
 }
 
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Page content wrapper - accounts for sidebar */
 .page-content {
   margin-left: var(--sidebar-width);
@@ -249,15 +258,28 @@ a:hover {
   flex-direction: column;
 }
 
-@media (max-width: 1024px) {
+/* md breakpoint (768px) matches Tailwind md: and sidebar hidden/shown */
+@media (max-width: 767px) {
   .page-content {
-    margin-left: var(--sidebar-collapsed);
+    margin-left: 0;
+    padding-bottom: 72px; /* Space for bottom nav */
   }
 }
 
+/* Mobile touch optimizations */
 @media (max-width: 768px) {
+  .card:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+  }
+}
+
+/* PWA safe area */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   .page-content {
-    margin-left: 0;
-    padding-bottom: 80px; /* Space for mobile nav */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 }

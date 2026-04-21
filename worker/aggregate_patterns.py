@@ -114,7 +114,11 @@ class PatternAggregator:
             try:
                 for row in rows:
                     # Take top 5 examples by severity
-                    example_game_ids = row["all_game_ids"][:5]
+                    # psycopg2 returns uuid[] as a raw string '{uuid1,uuid2,...}'
+                    raw_ids = row["all_game_ids"]
+                    if isinstance(raw_ids, str):
+                        raw_ids = [x for x in raw_ids.strip('{}').split(',') if x]
+                    example_game_ids = raw_ids[:5]
                     example_fens = row["all_fens"][:5]
 
                     upsert_cursor.execute(
@@ -124,7 +128,7 @@ class PatternAggregator:
                             occurrence_count, total_eval_loss, avg_eval_loss,
                             example_game_ids, example_fens,
                             first_seen, last_seen, updated_at
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::uuid[], %s, %s, %s, NOW())
                         ON CONFLICT (username, category, phase, piece_involved)
                         DO UPDATE SET
                             occurrence_count = EXCLUDED.occurrence_count,

@@ -17,8 +17,8 @@ interface TabNavProps {
 
 export default function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
   return (
-    <div className="border-b border-[var(--border-color)]">
-      <nav className="flex gap-0 -mb-px">
+    <div className="border-b border-[var(--border-color)] overflow-x-auto scrollbar-none">
+      <nav className="flex gap-0 -mb-px min-w-max">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab
           const Icon = tab.icon

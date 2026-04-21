@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Gamepad2, Target, AlertTriangle, Zap, RefreshCcw, GraduationCap, Lightbulb } from 'lucide-react'
+import { Gamepad2, Target, AlertTriangle, Zap, RefreshCcw, GraduationCap, Lightbulb, TrendingUp } from 'lucide-react'
 import StatCard from '@/components/ui/StatCard'
 import SectionHeader from '@/components/ui/SectionHeader'
 import ActionCard from '@/components/ui/ActionCard'
@@ -84,7 +84,7 @@ export default async function HomePage() {
 
       {/* Stats Row */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <StatCard
             icon={<Gamepad2 size={24} />}
             label="Total Games"
@@ -117,7 +117,7 @@ export default async function HomePage() {
       {/* Quick Actions */}
       <div className="mb-8">
         <SectionHeader title="Quick Actions" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           <ActionCard
             title="Missed Tactics"
             subtitle="Tactical opportunities"
@@ -126,11 +126,18 @@ export default async function HomePage() {
             accentColor="purple"
           />
           <ActionCard
-            title="Recurring Mistakes"
-            subtitle="Patterns you repeat"
-            href="/mistakes?tab=recurring"
+            title="Weakness Profile"
+            subtitle="Blind spots & motifs"
+            href="/mistakes?tab=weakness"
             icon={<RefreshCcw size={36} />}
             accentColor="amber"
+          />
+          <ActionCard
+            title="Performance"
+            subtitle="Thrown games & time"
+            href="/performance"
+            icon={<TrendingUp size={36} />}
+            accentColor="red"
           />
           <ActionCard
             title="Drill Mode"

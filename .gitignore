@@ -100,3 +100,13 @@ next-env.d.ts
 # Misc
 *.pem
 *.log
+
+# Generated reports / local artifacts
+*.pdf
+/chess.com board.png
+db/chess.db
+db/*.db-wal
+db/*.db-shm
+
+# Claude Code local state
+.claude/

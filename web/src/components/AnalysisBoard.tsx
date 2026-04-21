@@ -368,7 +368,7 @@ export default function AnalysisBoard({
       )}
 
       {/* Board */}
-      <div className="rounded-md overflow-hidden shadow-lg" style={{ width }}>
+      <div className="rounded-md overflow-hidden shadow-lg w-full" style={{ maxWidth: width }}>
         <Chessboard
           options={{
             position: currentFen.split(' ')[0],

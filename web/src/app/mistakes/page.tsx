@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { BarChart3, PieChart, BookOpen, List, RefreshCcw, BookMarked } from 'lucide-react'
+import { BarChart3, PieChart, BookOpen, List, RefreshCcw, BookMarked, Crosshair } from 'lucide-react'
 import TabNav, { type Tab } from '@/components/ui/TabNav'
 import MistakesOverview from '@/components/mistakes/MistakesOverview'
 import MistakesByPieceTab from '@/components/mistakes/MistakesByPieceTab'
@@ -10,9 +10,11 @@ import MistakesByOpeningTab from '@/components/mistakes/MistakesByOpeningTab'
 import AllMistakesTab from '@/components/mistakes/AllMistakesTab'
 import RecurringMistakesTab from '@/components/mistakes/RecurringMistakesTab'
 import OpeningPrepTab from '@/components/mistakes/OpeningPrepTab'
+import WeaknessProfileTab from '@/components/mistakes/WeaknessProfileTab'
 
 const tabs: Tab[] = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
+  { id: 'weakness', label: 'Weakness Profile', icon: Crosshair },
   { id: 'piece', label: 'By Piece', icon: PieChart },
   { id: 'opening', label: 'By Opening', icon: BookOpen },
   { id: 'all', label: 'All Moves', icon: List },
@@ -50,6 +52,7 @@ function MistakesHubContent() {
       </div>
 
       {activeTab === 'overview' && <MistakesOverview />}
+      {activeTab === 'weakness' && <WeaknessProfileTab />}
       {activeTab === 'piece' && <MistakesByPieceTab />}
       {activeTab === 'opening' && <MistakesByOpeningTab />}
       {activeTab === 'all' && <AllMistakesTab />}

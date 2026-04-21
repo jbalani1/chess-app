@@ -1,0 +1,28 @@
+{
+  "name": "Chess Insights",
+  "short_name": "Chess Insights",
+  "description": "Analyze your chess games and identify patterns in your mistakes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#262421",
+  "theme_color": "#81B64C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
