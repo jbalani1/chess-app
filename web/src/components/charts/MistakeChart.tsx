@@ -69,6 +69,7 @@ export default function MistakeChart({
           dataKey={yKey}
           fill="#81B64C"
           radius={[4, 4, 0, 0]}
+          isAnimationActive={false}
         />
       </BarChart>
     </ResponsiveContainer>
@@ -86,6 +87,7 @@ export default function MistakeChart({
           outerRadius={80}
           fill="#8884d8"
           dataKey={yKey}
+          isAnimationActive={false}
         >
           {data.map((_, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
