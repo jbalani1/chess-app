@@ -11,9 +11,10 @@ const DARK_SQUARE = "#769656"
 const HIGHLIGHT_COLOR = "rgba(255, 255, 0, 0.5)"
 
 // Arrow colors
-const BEST_MOVE_COLOR = "rgba(0, 150, 50, 0.8)" // Green for best move
-const YOUR_MOVE_COLOR = "rgba(200, 50, 50, 0.8)" // Red for your move
-const RESPONSE_COLOR = "rgba(50, 100, 200, 0.8)" // Blue for opponent response
+const BEST_MOVE_COLOR = "rgba(0, 150, 50, 0.85)" // Green for best move
+const YOUR_MOVE_COLOR = "rgba(202, 52, 49, 0.9)" // Red for your move
+const PLAYED_MOVE_COLOR = "rgba(230, 157, 0, 0.9)" // Amber for the opponent's played move
+const RESPONSE_COLOR = "rgba(93, 155, 236, 0.85)" // Blue for the expected reply
 
 interface PreviousMove {
   fen: string // Position AFTER this move
@@ -147,9 +148,15 @@ export default function AnalysisBoard({
         // Your move was the best move - show green arrow only
         newArrows.push({ startSquare: yourMove.from, endSquare: yourMove.to, color: BEST_MOVE_COLOR })
       } else {
-        // Show "your move" (if provided) in red - but only if this is actually the user's move
-        if (yourMove && isUserMove) {
-          newArrows.push({ startSquare: yourMove.from, endSquare: yourMove.to, color: YOUR_MOVE_COLOR })
+        // Always show the move that was actually played: red when it's the
+        // user's move, amber when it's the opponent's. (Previously the opponent's
+        // move was dropped, so the legend promised an arrow that never appeared.)
+        if (yourMove) {
+          newArrows.push({
+            startSquare: yourMove.from,
+            endSquare: yourMove.to,
+            color: isUserMove ? YOUR_MOVE_COLOR : PLAYED_MOVE_COLOR,
+          })
         }
 
         // Show pre-computed best move (if different from your move) in green
@@ -509,10 +516,14 @@ export default function AnalysisBoard({
         {yourMove && historyIndex === 0 && (
           <button
             onClick={playYourMove}
-            className="px-3 py-1.5 text-sm font-medium rounded bg-red-500/20 text-red-400 hover:bg-red-500/30"
-            title="Play the move you made"
+            className={`px-3 py-1.5 text-sm font-medium rounded ${
+              isUserMove
+                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+            }`}
+            title="Play the move that was made"
           >
-            Play Your Move{yourMoveSan ? ` (${yourMoveSan})` : ''}
+            {isUserMove ? 'Play Your Move' : 'Play This Move'}{yourMoveSan ? ` (${yourMoveSan})` : ''}
           </button>
         )}
 
@@ -540,25 +551,32 @@ export default function AnalysisBoard({
 
       {/* Contextual hint text */}
       {historyIndex === 0 && yourMoveSan && bestMoveSan && yourMoveSan !== bestMoveSan && (
-        <p className="px-2 text-xs text-[var(--text-secondary)]">
-          You played <strong className="text-red-400">{yourMoveSan}</strong> (red). The best move was <strong className="text-green-400">{bestMoveSan}</strong> (green). Blue shows the expected reply.
+        <p className="px-2 text-sm text-[var(--text-secondary)] leading-relaxed">
+          {isUserMove ? (
+            <>You played <strong className="text-red-400">{yourMoveSan}</strong> (red). The best move was <strong className="text-green-400">{bestMoveSan}</strong> (green). Blue shows the expected reply.</>
+          ) : (
+            <>Your opponent played <strong className="text-amber-400">{yourMoveSan}</strong> (amber). The strongest move here was <strong className="text-green-400">{bestMoveSan}</strong> (green).</>
+          )}
         </p>
       )}
 
       {/* Contextual legend */}
-      <div className="flex items-center gap-4 px-2 text-xs text-[var(--text-muted)]">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded" style={{ backgroundColor: BEST_MOVE_COLOR }} />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 text-sm text-[var(--text-secondary)]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: BEST_MOVE_COLOR }} />
           <span>{historyIndex === 0 ? 'Best move' : 'Engine suggestion'}</span>
         </div>
-        {historyIndex === 0 && (
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: YOUR_MOVE_COLOR }} />
-            <span>Your move</span>
+        {historyIndex === 0 && yourMove && (
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3.5 h-3.5 rounded-sm"
+              style={{ backgroundColor: isUserMove ? YOUR_MOVE_COLOR : PLAYED_MOVE_COLOR }}
+            />
+            <span>{isUserMove ? 'Your move' : 'Opponent’s move'}</span>
           </div>
         )}
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded" style={{ backgroundColor: RESPONSE_COLOR }} />
+        <div className="flex items-center gap-1.5">
+          <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: RESPONSE_COLOR }} />
           <span>Expected reply</span>
         </div>
       </div>

@@ -75,9 +75,17 @@ export default function GameDetailPage({ params }: { params: Promise<{ id: strin
               setSelectedMoveId(data.moves[0].id)
             }
           } else {
-            // Set initial board to the position after the first move
-            setCurrentFen(data.moves[0].position_fen)
-            setSelectedMoveId(data.moves[0].id)
+            // Open on the player's own first move — preferring their first
+            // mistake/blunder — so the "your move" arrow is meaningful right away
+            // (landing on the opponent's move 1 showed no red arrow).
+            const userIsBlack = data.game.username?.toLowerCase() === data.game.black_player?.toLowerCase()
+            const isUsers = (m: Move) => (userIsBlack ? m.ply % 2 === 0 : m.ply % 2 === 1)
+            const target =
+              data.moves.find(m => isUsers(m) && (m.classification === 'mistake' || m.classification === 'blunder')) ||
+              data.moves.find(isUsers) ||
+              data.moves[0]
+            setCurrentFen(target.position_fen)
+            setSelectedMoveId(target.id)
           }
         }
       } catch (err) {
