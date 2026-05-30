@@ -566,7 +566,7 @@ export default function AnalysisBoard({
           <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: BEST_MOVE_COLOR }} />
           <span>{historyIndex === 0 ? 'Best move' : 'Engine suggestion'}</span>
         </div>
-        {historyIndex === 0 && yourMove && (
+        {historyIndex === 0 && (isUserMove || yourMove) && (
           <div className="flex items-center gap-1.5">
             <div
               className="w-3.5 h-3.5 rounded-sm"
