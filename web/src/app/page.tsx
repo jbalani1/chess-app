@@ -1,10 +1,11 @@
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import Link from 'next/link'
 import { Gamepad2, Target, AlertTriangle, Zap, RefreshCcw, GraduationCap, Lightbulb, TrendingUp } from 'lucide-react'
 import StatCard from '@/components/ui/StatCard'
 import SectionHeader from '@/components/ui/SectionHeader'
 import ActionCard from '@/components/ui/ActionCard'
 import MistakeChart from '@/components/charts/MistakeChart'
+import TopPatternsHero, { type TopPattern } from '@/components/dashboard/TopPatternsHero'
 
 async function getGameStatistics() {
   const { data, error } = await supabase
@@ -49,6 +50,63 @@ async function getMistakesByTimeControl() {
   return data || []
 }
 
+// The player's biggest recurring mistake habits, aggregated by category, in
+// impact order. Powers the dashboard hero (docs/PERSONA.md principle #2).
+async function getTopPatterns(): Promise<TopPattern[]> {
+  const username = process.env.CHESS_COM_USERNAME
+  if (!username) return []
+
+  const { data, error } = await supabaseAdmin
+    .from('blunder_patterns')
+    .select('category, occurrence_count, total_eval_loss, example_fens, example_game_ids')
+    .eq('username', username)
+
+  if (error || !data) {
+    if (error) console.error('Error fetching top patterns:', error)
+    return []
+  }
+
+  interface Agg {
+    category: string
+    count: number
+    totalLoss: number
+    exampleFen: string | null
+    exampleGameId: string | null
+    bestCount: number
+  }
+  const agg: Record<string, Agg> = {}
+
+  for (const row of data) {
+    const cat = row.category as string
+    if (!agg[cat]) {
+      agg[cat] = { category: cat, count: 0, totalLoss: 0, exampleFen: null, exampleGameId: null, bestCount: -1 }
+    }
+    const a = agg[cat]
+    const occ = row.occurrence_count ?? 0
+    a.count += occ
+    a.totalLoss += Number(row.total_eval_loss ?? 0)
+
+    // Keep the example position from the most-repeated row in this category.
+    const fen = row.example_fens?.[0] ?? null
+    if (fen && occ > a.bestCount) {
+      a.bestCount = occ
+      a.exampleFen = fen
+      a.exampleGameId = row.example_game_ids?.[0] ?? null
+    }
+  }
+
+  return Object.values(agg)
+    .sort((x, y) => y.totalLoss - x.totalLoss)
+    .slice(0, 3)
+    .map((a) => ({
+      category: a.category,
+      count: a.count,
+      avgEvalLoss: a.count > 0 ? a.totalLoss / a.count : 0,
+      exampleFen: a.exampleFen,
+      exampleGameId: a.exampleGameId,
+    }))
+}
+
 async function getRecentGames() {
   const { data, error } = await supabase
     .from('games')
@@ -65,22 +123,26 @@ async function getRecentGames() {
 }
 
 export default async function HomePage() {
-  const [stats, mistakesByPhase, mistakesByTimeControl, recentGames] = await Promise.all([
+  const [stats, mistakesByPhase, mistakesByTimeControl, recentGames, topPatterns] = await Promise.all([
     getGameStatistics(),
     getMistakesByPhase(),
     getMistakesByTimeControl(),
-    getRecentGames()
+    getRecentGames(),
+    getTopPatterns()
   ])
 
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
         <p className="text-[var(--text-secondary)] mt-1">
           Your chess analysis at a glance
         </p>
       </div>
+
+      {/* Top mistake patterns — lead with what's costing the player games */}
+      <TopPatternsHero patterns={topPatterns} />
 
       {/* Stats Row */}
       {stats && (
