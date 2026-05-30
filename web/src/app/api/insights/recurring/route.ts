@@ -51,7 +51,7 @@ const PIECE_NAMES: Record<string, string> = {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const username = searchParams.get('username') || process.env.CHESS_USERNAME
+    const username = searchParams.get('username') || process.env.CHESS_COM_USERNAME
 
     if (!username) {
       return NextResponse.json({ error: 'Username required' }, { status: 400 })
