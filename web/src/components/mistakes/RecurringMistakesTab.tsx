@@ -427,7 +427,12 @@ export default function RecurringMistakesTab() {
                         fen={selectedPosition.position_fen}
                         width={450}
                         orientation={selectedPosition.user_color}
-                        yourMove={selectedMoveGroup ? sanToUci(selectedPosition.position_fen, selectedMoveGroup) : null}
+                        yourMove={(() => {
+                          // Default to the worst (first-sorted) played move so the
+                          // red "your move" arrow shows on load, matching the key.
+                          const moveSan = selectedMoveGroup ?? sortedGroupedMoves[0]?.move_san
+                          return moveSan ? sanToUci(selectedPosition.position_fen, moveSan) : null
+                        })()}
                         bestMove={(() => {
                           const group = selectedMoveGroup
                             ? sortedGroupedMoves.find(g => g.move_san === selectedMoveGroup)
