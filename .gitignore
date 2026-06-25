@@ -81,6 +81,9 @@ out/
 # Production build
 web/build/
 
+# Visual review harness output (regenerated on demand)
+web/.screenshots/
+
 # Testing
 coverage/
 
