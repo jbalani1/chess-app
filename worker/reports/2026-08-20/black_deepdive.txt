@@ -1,0 +1,92 @@
+
+==============================================================================
+CONVERSION — what happens to good positions
+==============================================================================
+  reached +3.00 or more (winning)          n= 30  won 23  lost  5  drew  2   (77% converted)
+  reached +1.00..+3.00 (clearly better)    n=  8  won  0  lost  8  drew  0   (0% converted)
+  never better than +1.00                  n= 12  won  1  lost 11  drew  0   (8% converted)
+
+  games where Black reached +3.00 (winning) and still LOST: 5
+  games where Black was -3.00 (losing) and still WON:    11
+
+==============================================================================
+MATERIAL DROPS — verified by static exchange evaluation
+==============================================================================
+  error moves with a stored position: 262
+  moves that left >= 2 pawns of material free to take: 36  (14% of error moves)
+  moves that dropped exactly 1 pawn:                   63
+  of the >=2-pawn drops, opponent took it:             24/36 (67%)
+
+  size of material dropped (pawn-equivalents):
+     9 pawns  x1
+     6 pawns  x1
+     5 pawns  x9
+     3 pawns  x19
+     2 pawns  x6
+
+  by phase:
+    middlegame  x20
+    opening     x13
+    endgame     x3
+
+  drops made FROM a better position (Black was +1.00 or more):
+    17 of 36
+
+  worst 25 drops (move, what was hung, punished?):
+    mv 17. Qxf3     -> Qxf3     wins  9p  TAKEN         middlegame  was    +3cp  better: Nxc4
+    mv  7. gxh5     -> Nxd8     wins  6p  TAKEN         opening     was  +669cp  better: Kxf7
+    mv 16. Nc6      -> Qxh8     wins  5p  TAKEN         middlegame  was  +105cp  better: Be7
+    mv 28. Rg8      -> Bxg8     wins  5p  TAKEN         middlegame  was  +492cp  better: Ra1
+    mv 21. Rxf5     -> Qxf5     wins  5p  TAKEN         middlegame  was  -672cp  better: Nd6
+    mv 24. Rxd3     -> Bxd3     wins  5p  missed by opp middlegame  was  -430cp  better: fxg6
+    mv 37. Rxd4     -> Kxd4     wins  5p  TAKEN         middlegame  was  +535cp  better: b6+
+    mv 52. h2       -> Kxh5     wins  5p  TAKEN         endgame     was +1208cp  better: h2
+    mv 37. Rxe4     -> Kxe4     wins  5p  TAKEN         middlegame  was  +520cp  better: Rd3+
+    mv 11. Ke8      -> Qxa8     wins  5p  missed by opp opening     was   +19cp  better: Bf6
+    mv 28. Rxa2     -> Nxa2     wins  5p  TAKEN         middlegame  was  +451cp  better: Nd5
+    mv 47. Ng3+     -> fxg3     wins  3p  missed by opp endgame     was  +390cp  better: Kd7
+    mv 67. Kd7      -> Kxb7     wins  3p  missed by opp endgame     was -6449cp  better: a4
+    mv 15. exd4     -> exd5     wins  3p  TAKEN         opening     was  +555cp  better: Bf3
+    mv 20. f5       -> Qxh6     wins  3p  TAKEN         middlegame  was  -280cp  better: Kh8
+    mv 11. Bb4      -> Qxb4     wins  3p  missed by opp opening     was  -173cp  better: Qd6
+    mv 13. Na6      -> Bxa6     wins  3p  TAKEN         opening     was  -269cp  better: Re8+
+    mv  7. f6       -> Qxd5     wins  3p  missed by opp opening     was   -27cp  better: Qxg5
+    mv 10. Nxe3     -> Qxe3     wins  3p  TAKEN         opening     was  +267cp  better: Bg4
+    mv 11. Bxf3     -> Qxf3     wins  3p  TAKEN         opening     was    -1cp  better: Bb4
+    mv 28. Kf6      -> Rxh1     wins  3p  TAKEN         middlegame  was  -628cp  better: Bd5
+    mv 26. Bxg2     -> Qxg2     wins  3p  TAKEN         middlegame  was  +781cp  better: Bc6
+    mv 23. Be6      -> Bxc6     wins  3p  TAKEN         middlegame  was  -208cp  better: e4
+    mv 18. Bxg2     -> Kxg2     wins  3p  TAKEN         middlegame  was  +581cp  better: Re2+
+    mv 19. Qxg4     -> Rxf6     wins  3p  missed by opp middlegame  was  +338cp  better: g5
+
+==============================================================================
+ENDGAME — 197 moves, 45 blunders
+==============================================================================
+  K   moves=  62 errors= 20 (32.3%)
+  N   moves=  31 errors= 12 (38.7%)
+  P   moves=  35 errors=  6 (17.1%)
+  R   moves=  31 errors=  6 (19.4%)
+  Q   moves=  28 errors=  5 (17.9%)
+  B   moves=  10 errors=  4 (40.0%)
+  games that reached an endgame (ply>80): 14
+
+==============================================================================
+THE OPEN-GAME PROBLEM — d4-early lines vs slow Italian/Ruy lines
+==============================================================================
+  group                                                      n  score%  ACPL  bl/g  err%
+  vs 1.d4 / flank                                           12   41.7%   101   2.4  14.2
+  early d4 / Knights (Scotch, Center, Danish, 3-4 Knights)  11   31.8%   108   2.5  18.1
+  Italian complex (C50-C59)                                 10   65.0%   118   5.0  19.4
+  Vienna / Bishops / KP side lines (C20-C29)                 9   22.2%    88   2.1  13.4
+  Ruy Lopez (C60-C99)                                        6  100.0%   116   3.3  14.5
+  Kings Gambit (C30-C39)                                     2  100.0%   140   6.5  17.4
+
+  Black-POV eval after move 12:
+    early d4 / Knights         n= 9   -109cp
+    vs 1.d4 / flank            n=12   -102cp
+    Vienna / Bishops           n= 9     -8cp
+    Ruy Lopez                  n= 6   +152cp
+    Kings Gambit               n= 2   +157cp
+    Italian complex            n= 9   +178cp
+
+done.
