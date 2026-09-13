@@ -44,6 +44,14 @@ function formatBucketLabel(period: string, granularity: string): string {
   return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${end.getDate()}`
 }
 
+interface GameRef {
+  username?: string | null
+  white_player?: string | null
+  black_player?: string | null
+  time_control?: string | null
+  played_at?: string | null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -110,7 +118,10 @@ export async function GET(request: NextRequest) {
     }> = {}
 
     for (const move of data || []) {
-      const game = move.games as any
+      // Supabase types an embedded row as either an object or an array
+      // depending on how it infers the relationship, so normalise both.
+      const embedded = move.games as GameRef | GameRef[] | null
+      const game: GameRef = (Array.isArray(embedded) ? embedded[0] : embedded) ?? {}
       const username = game.username?.toLowerCase()
       const whitePlayer = game.white_player?.toLowerCase()
       const blackPlayer = game.black_player?.toLowerCase()
@@ -129,6 +140,9 @@ export async function GET(request: NextRequest) {
         if (!timeControlPatterns.some(p => gameTC.includes(p))) continue
       }
 
+      // A row with no played_at cannot be bucketed; skip it rather than
+      // producing an Invalid Date that silently lands in a junk bucket.
+      if (!game.played_at) continue
       const playedAt = new Date(game.played_at)
       const bucketKey = granularity === 'month'
         ? getMonthBucket(playedAt)
