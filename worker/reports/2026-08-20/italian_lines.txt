@@ -1,0 +1,74 @@
+==============================================================================
+A) The ...Bb4+ check after c3/d4/cxd4 — how White answers it
+==============================================================================
+  games reaching a ...Bb4(+) check after move 4: 36
+  White reply   n  score%
+  Nc3         18   47.2%
+  Bd2          9   44.4%
+  c3           2   50.0%
+  Bxc6         1    0.0%
+  d3           1    0.0%
+  Re2          1    0.0%
+  f3           1    0.0%
+  e5           1    0.0%
+  Nd2          1    0.0%
+  O-O          1    0.0%
+
+  sample lines:
+    after Nc3: e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+ Nc3 Nf6 a3
+    after Bd2: e4 e5 Nf3 Nc6 Bc4 h6 d4 exd4 Nxd4 Ne5 Bxf7+ Nxf7 O-O Bc5 Nc3 Nf6 e5 Nxe5 Re1 d6 Na4 Bb4 Bd2 Bg4 f3
+    after c3: e4 e5 Nf3 Nc6 Bc4 Nf6 d3 d5 exd5 Nxd5 Ng5 Bb4+ c3 Nxc3 Nxc3
+    after Bxc6: e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 O-O O-O Bg5 a6 Re1 b5 Bd5 Bb7 c3 Qe8 d4 exd4 cxd4 Bb4 Bxc6 Bxc6 Nc3
+
+==============================================================================
+B) Move-9 Re1 — the positions it was played in
+==============================================================================
+  mv 9 blunder  -431 cp  +107-> -324 better:g3      [0-1]
+       e4 e5 Nf3 Nc6 Bc4 Nd4 Nxd4 exd4 d3 Bc5 O-O Bd6 c3 Qh4 e5 Bxe5 Re1 d6
+  mv 9 blunder  -417 cp   +88-> -329 better:Bxe6    [0-1]
+       e4 e5 Nf3 Nc6 Bc4 d6 O-O h6 a4 Nf6 d4 exd4 Nxd4 Be6 Nxc6 bxc6 Re1 Bxc4
+  mv12 blunder  -302 cp   +26-> -276 better:b4      [0-1]
+       e4 e5 Nf3 Nc6 Bc4 Bc5 c3 a6 d4 exd4 cxd4 Bb4+ Nc3 d6 O-O Nge7 a3 Ba5 Nd5 Nxd5 exd5 Ne7 Re1 O-O
+  mv11 mistake  -271 cp  -160-> -431 better:Be2     [1-0]
+       e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Bb6 d4 exd4 cxd4 Nf6 e5 Ng4 O-O O-O d5 Ncxe5 Nxe5 Nxe5 Re1 Nxc4
+  mv 9 mistake  -259 cp  +515-> +256 better:Qb3     [0-1]
+       e4 e5 Nf3 Nc6 Bc4 d6 c3 h6 d4 exd4 Nxd4 g6 Nxc6 bxc6 O-O Bb7 Re1 Qf6
+  mv 9 mistake  -213 cp  +340-> +127 better:e5      [1-0]
+       e4 e5 Nf3 Nc6 Bc4 h6 c3 Nf6 d3 Bc5 O-O a6 d4 exd4 cxd4 Bb6 Re1 O-O
+  mv 9 mistake  -171 cp  +204->  +33 better:e5      [0-1]
+       e4 e5 Nf3 Nc6 Bc4 h6 d4 Nxd4 Nxd4 exd4 Qxd4 Nf6 Nc3 Bb4 O-O O-O Re1 Bxc3
+  mv 9 mistake  -168 cp  +481-> +313 better:Nc3     [1-0]
+       e4 e5 Nf3 Nc6 Bc4 h6 d4 exd4 Nxd4 Nxd4 Qxd4 Nf6 e5 Qe7 O-O Ng8 Re1 Qb4
+  mv12 mistake  -158 cp  +114->  -44 better:Ne3     [0-1]
+       e4 e5 Nf3 Nc6 Bc4 Nf6 d3 h6 O-O Bc5 c3 O-O b4 Be7 b5 Na5 Nxe5 Nxc4 Nxc4 b6 Nbd2 Bb7 Re1 d5
+  mv10 mistake  -157 cp  +188->  +31 better:Bxd5    [1-0]
+       e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 O-O O-O c3 d5 exd5 Nxd5 Bg5 Qd6 b4 Bb6 Re1 a5
+  mv 9 mistake  -154 cp  +122->  -32 better:d5      [1-0]
+       e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 O-O O-O h6 d4 exd4 cxd4 Bb6 Re1 Na5
+  mv10 mistake  -153 cp   +73->  -80 better:Bd5     [0-1]
+       e4 e5 Nf3 Nc6 Bc4 Nf6 d3 h6 c3 b6 O-O Bb7 Qb3 Qe7 a4 a6 Qa2 Na5 Re1 Nxc4
+
+==============================================================================
+C) Black's setups against the Italian — which give White the most trouble
+==============================================================================
+  Black 3rd move     n  White score%
+  Bc5               65         49.2%
+  Nf6               62         67.7%
+  h6                27         38.9%
+  d6                 7         42.9%
+  f5                 6         50.0%
+  Nd4                5         20.0%
+
+  --- White's 4th move choice and how it scores ---
+  Black 3rd / White 4th      n   score%
+  Bc5 / c3                  61    49.2%
+  Nf6 / d3                  54    72.2%
+  h6 / d4                   15    33.3%
+  h6 / c3                    5    70.0%
+  f5 / exf5                  5    40.0%
+  d6 / O-O                   4    50.0%
+
+  --- d3 (slow) vs d4 (sharp) as White's plan ---
+  played d3 (slow / Pianissimo)      n= 88  score  60.2%
+  played d4 early (sharp centre)     n= 88  score  44.9%
+  neither in first 10 moves          n=  4  score  75.0%

@@ -1,0 +1,207 @@
+
+==============================================================================
+SCOPE — Italian Opening as White
+==============================================================================
+  180 games  2025-08-05 .. 2026-08-19
+  W/L/D: 95/84/1   score 53.1%
+
+==============================================================================
+PERFORMANCE BY ITALIAN VARIATION (as White)
+==============================================================================
+  variation                                            n  score%  ACPL  mis/g  bl/g
+  Giuoco Piano Game Main Line                         57   56.1%    92   2.47  2.53
+  Italian Game                                        35   38.6%    88   2.40  2.46
+  Italian Game Two Knights Modern                     24   66.7%    78   1.04  2.29
+  Giuoco Piano Game 4.O O                             16   37.5%    95   1.81  3.00
+  Giuoco Piano Game Giuoco Pianissimo                 10   90.0%    67   0.90  1.50
+  Giuoco Piano Game...6.c3 O O                         4  100.0%    68   0.75  1.75
+  Giuoco Piano Game Center Attack                      3    0.0%   121   2.33  2.67
+  Giuoco Piano Game                                    3   33.3%    70   4.33  1.67
+  Giuoco Piano Game...5.d3 d6 6.c3                     3   33.3%    69   2.67  1.67
+  Italian Game 3...d6 4.d4                             3   33.3%   128   1.33  7.00
+  Italian Game 3...d6 4.O O                            3   66.7%   118   1.33  2.67
+
+==============================================================================
+ERROR PROFILE — White's own moves in the Italian
+==============================================================================
+  White moves: 5213   ACPL (capped) 88
+  good 69.0%  inacc 15.5%  mistake 7.1%  blunder 8.4%
+  per game: 2.04 mistakes, 2.44 blunders
+
+  --- by move-number band ---
+  moves 1-10   moves= 1787 errors= 110 ( 6.2%) ACPL=34
+  moves 11-20  moves= 1581 errors= 277 (17.5%) ACPL=87
+  moves 21-30  moves= 1045 errors= 238 (22.8%) ACPL=141
+  moves 31-40  moves=  442 errors= 117 (26.5%) ACPL=151
+  move 41+     moves=  358 errors=  66 (18.4%) ACPL=124
+
+  --- by piece moved ---
+  R   moves=  885 errors= 178 (20.1%)
+  Q   moves=  608 errors= 143 (23.5%)
+  P   moves= 1430 errors= 136 ( 9.5%)
+  B   moves=  887 errors= 134 (15.1%)
+  N   moves=  855 errors= 110 (12.9%)
+  K   moves=  548 errors= 107 (19.5%)
+
+==============================================================================
+OPENING-PHASE REPEATS (White, moves 1-15, same move number + SAN, >=3x)
+==============================================================================
+  move  9. Re1      x7   avg -259  cp blunders=2  better: Bxe6, d5, e5
+  move  9. Bxf7+    x4   avg -355  cp blunders=3  better: h3, Qa4+, Qb3
+  move 15. f4       x4   avg -266  cp blunders=2  better: a4, O-O
+  move 10. Nd5      x4   avg -250  cp blunders=1  better: e5, Nb5, Ng5
+  move  9. O-O      x4   avg -202  cp blunders=0  better: b4, e5, Qh5
+  move 10. Be3      x3   avg -379  cp blunders=1  better: Bxd5, d6, Qd3
+  move  6. Bxf7+    x3   avg -364  cp blunders=3  better: Bb3, Be2, h3
+  move 13. Qb3      x3   avg -347  cp blunders=2  better: a4, hxg4, Nbd2
+  move 12. Qe2      x3   avg -213  cp blunders=0  better: Bxf7+, Qxd5
+  move  6. Bb5      x3   avg -205  cp blunders=0  better: d3, exd5
+  move 10. Ng5+     x3   avg -204  cp blunders=0  better: d5, h3
+  move 11. Bb5+     x3   avg -175  cp blunders=0  better: Bg6+, Re1
+
+==============================================================================
+RECURRING MOVE IDEAS (White, any move number, >=5x)
+==============================================================================
+  Re1       x22  avg -686  cp blunders=8   (moves 9-32)
+  Bxf7+     x18  avg -356  cp blunders=12  (moves 6-26)
+  Be3       x11  avg -300  cp blunders=5   (moves 7-28)
+  Kf3       x10  avg -2896 cp blunders=8   (moves 28-43)
+  Bg5       x10  avg -300  cp blunders=2   (moves 7-45)
+  Qe2       x10  avg -358  cp blunders=2   (moves 10-42)
+  e5        x9   avg -240  cp blunders=3   (moves 7-21)
+  h3        x9   avg -270  cp blunders=4   (moves 9-30)
+  f4        x9   avg -1942 cp blunders=5   (moves 12-37)
+  Qf3       x8   avg -385  cp blunders=5   (moves 7-21)
+  Kf1       x8   avg -1333 cp blunders=4   (moves 11-36)
+  O-O       x8   avg -1363 cp blunders=1   (moves 6-13)
+  g4        x8   avg -766  cp blunders=4   (moves 16-42)
+  Kg1       x7   avg -266  cp blunders=6   (moves 19-44)
+  Qg3       x7   avg -2921 cp blunders=4   (moves 10-25)
+  Ke3       x7   avg -2395 cp blunders=6   (moves 18-48)
+  Nxe5      x7   avg -287  cp blunders=4   (moves 4-15)
+  Kh1       x7   avg -3674 cp blunders=7   (moves 20-44)
+  Rd1       x7   avg -348  cp blunders=3   (moves 16-46)
+  Ng5       x7   avg -1601 cp blunders=3   (moves 6-26)
+  a3        x7   avg -198  cp blunders=0   (moves 7-16)
+  Nd5       x7   avg -245  cp blunders=1   (moves 9-26)
+  Qb3       x7   avg -344  cp blunders=4   (moves 11-22)
+  c4        x6   avg -1937 cp blunders=5   (moves 15-35)
+  Bb5       x6   avg -250  cp blunders=1   (moves 6-24)
+  Bf4       x6   avg -3118 cp blunders=2   (moves 10-26)
+  Ng6       x6   avg -423  cp blunders=4   (moves 10-32)
+  Qe3       x6   avg -1948 cp blunders=4   (moves 18-38)
+  Rb1       x6   avg -1694 cp blunders=3   (moves 10-39)
+  Ba3       x5   avg -1584 cp blunders=3   (moves 12-34)
+
+==============================================================================
+THE Bxf7+ SACRIFICE — every time White played it
+==============================================================================
+  played 37 times: blunder=14, good=12, mistake=6, inaccuracy=5
+  sound: 12   unsound (mistake/blunder): 20
+
+  the unsound ones (eval before -> after, White POV):
+    mv  6  blunder  -342  cp     +19 ->  -323  better: h3       game result 1-0  2026-03-29
+    mv  6  blunder  -375  cp     +78 ->  -297  better: Be2      game result 0-1  2026-03-07
+    mv  6  blunder  -375  cp     +87 ->  -288  better: Bb3      game result 0-1  2026-03-07
+    mv  9  blunder  -369  cp    +262 ->  -107  better: Qa4+     game result 0-1  2026-04-12
+    mv  9  blunder  -335  cp    +169 ->  -166  better: h3       game result 0-1  2026-03-06
+    mv  9  mistake  -299  cp    +165 ->  -134  better: h3       game result 0-1  2026-03-06
+    mv  9  blunder  -418  cp    +312 ->  -106  better: Qb3      game result 0-1  2026-02-14
+    mv 10  blunder  -600  cp    +501 ->   -99  better: Nc3      game result 1-0  2026-07-07
+    mv 13  blunder  -370  cp    +295 ->   -75  better: gxf3     game result 1-0  2026-02-14
+    mv 14  mistake  -155  cp    -235 ->  -390  better: Nxe5     game result 0-1  2026-02-25
+    mv 15  blunder  -587  cp    +307 ->  -280  better: g3       game result 0-1  2026-03-25
+    mv 16  mistake  -203  cp     -72 ->  -275  better: Rac1     game result 0-1  2026-03-24
+    mv 17  blunder  -586  cp    +188 ->  -398  better: Qf3      game result 0-1  2026-07-05
+    mv 18  mistake  -154  cp    -744 ->  -898  better: Qf4      game result 0-1  2025-10-10
+    mv 20  blunder  -318  cp    -327 ->  -645  better: Qf3      game result 0-1  2026-07-22
+    mv 21  mistake  -201  cp    +679 ->  +478  better: Re3      game result 0-1  2025-08-14
+    mv 23  mistake  -190  cp    -457 ->  -647  better: Bb3      game result 0-1  2026-04-20
+    mv 26  blunder  -658  cp    +412 ->  -246  better: Kf2      game result 0-1  2026-03-07
+    mv 26  blunder  -450  cp    +258 ->  -192  better: Kf2      game result 0-1  2026-03-06
+    mv 30  blunder  -1184 cp   +1371 ->  +187  better: Ng6+     game result 1-0  2025-12-26
+
+  lines leading into the unsound sacs (first 12 plies):
+    mv 6 [1-0] e4 e5 Nf3 Nc6 Bc4 d6 O-O Bg4 Nc3 a6 Bxf7+ Kd7
+    mv 6 [0-1] e4 e5 Nf3 Nc6 Bc4 h6 d4 exd4 Nxd4 Ne5 Bxf7+ Nxf7
+    mv 6 [0-1] e4 e5 Nf3 Nc6 Bc4 h6 d4 exd4 Nxd4 Ne5 Bxf7+ Nxf7
+    mv 9 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+
+    mv 9 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+
+    mv 9 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+
+    mv 9 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb6
+    mv10 [1-0] e4 e5 Nf3 Nc6 Bc4 h6 d4 exd4 Nxd4 Nxd4 Qxd4 Nf6
+    mv13 [1-0] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+
+    mv14 [0-1] e4 e5 Nf3 Nc6 Bc4 h6 c3 Nf6 d3 d5 exd5 Nxd5
+    mv15 [0-1] e4 e5 Nf3 Nc6 Bc4 Nd4 Nxd4 exd4 d3 Qf6 O-O a6
+    mv16 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 a3 d6 O-O Bg4 h3 h5
+    mv17 [0-1] e4 e5 Nf3 Nc6 Bc4 h6 d4 exd4 Nxd4 Ne5 Bb3 Qh4
+    mv18 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb6
+    mv20 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 a6 b4 Ba7
+    mv21 [0-1] e4 e5 Nf3 Nc6 Bc4 h6 d3 Nf6 c3 Bc5 d4 exd4
+    mv23 [0-1] e4 e5 Nf3 Nc6 Bc4 Nf6 O-O h6 d3 Bc5 Nc3 d6
+    mv26 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+
+    mv26 [0-1] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 d6 d4 exd4 cxd4 Bb4+
+    mv30 [1-0] e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 h6 O-O O-O
+
+==============================================================================
+CENTRE HANDLING — the c3/d4 pawn centre
+==============================================================================
+  e5      x9   avg -240  cp blunders=3   better: Be3, Bxf7+, cxd4, Nc3
+  d4      x5   avg -2146 cp blunders=2   better: a4, f4, Nxe5, O-O
+  cxd4    x5   avg -328  cp blunders=1   better: Bxh6, e5, g3, hxg4
+  d5      x4   avg -269  cp blunders=1   better: a5, Bg5, h3, Nh4
+  Nxd4    x3   avg -220  cp blunders=1   better: cxd4, Nxe5
+  dxe5    x2   avg -326  cp blunders=1   better: Bd5, Qe2
+  cxb4    x2   avg -4633 cp blunders=2   better: Bb2, Re1
+  Qxd4    x1   avg -150  cp blunders=0   better: Qd5
+  cxd5    x1   avg -211  cp blunders=0   better: Rxd3
+  dxc3    x1   avg -332  cp blunders=1   better: d4
+
+  --- when the centre resolves: eval swing at moves 8-16 ---
+  move  n   avg eval (White POV)  errors
+     6 180      +17cp              19 (10.6%)
+     7 178      +35cp              11 ( 6.2%)
+     8 177      +41cp               9 ( 5.1%)
+     9 176      +27cp              30 (17.0%)
+    10 176       +9cp              32 (18.2%)
+    11 174     +109cp              36 (20.7%)
+    12 172      +54cp              32 (18.6%)
+    13 166      -13cp              22 (13.3%)
+    14 163     +104cp              34 (20.9%)
+    15 158      +13cp              26 (16.5%)
+    16 156      +81cp              23 (14.7%)
+    17 153       -3cp              21 (13.7%)
+    18 148     -114cp              35 (23.6%)
+
+==============================================================================
+MATERIAL DROPS IN THE ITALIAN (SEE-verified, White's moves)
+==============================================================================
+  error moves examined: 781
+  left >= 2 pawns of free material: 203 (26%)   -- opponent took it 121/203 (60%)
+  dropped exactly 1 pawn:          182
+  sizes: 9p x25, 6p x1, 5p x33, 4p x2, 3p x117, 2p x25
+  by phase: middlegame x122, opening x76, endgame x5
+
+  drops inside the opening (moves 1-15): 76
+    mv 12. b3       -> Qxd1+    wins  9p   was  -415cp  better: Qxd8+
+    mv 10. Qd5      -> Nxd5     wins  9p   was   -61cp  better: Ne2
+    mv 10. Bd3      -> Bxg4     wins  9p   was  +225cp  better: Qh5
+    mv  7. Ke2      -> Nxg1+    wins  5p   was  -654cp  better: Qxf3
+    mv 14. Be4      -> Kxe7     wins  5p   was +1184cp  better: Rxf7
+    mv 11. Kf1      -> Nxa1     wins  5p   was    +0cp  better: Kd1
+    mv 12. Ne4      -> Nxa1     wins  5p   was    +0cp  better: Qf4
+    mv 14. Bxf7+    -> Kxf7     wins  3p   was  -235cp  better: Nxe5
+    mv 11. Nxf6+    -> Bxf6     wins  3p   was  +543cp  better: Bf4
+    mv  9. Bxf7+    -> Kxf7     wins  3p   was  +165cp  better: h3
+    mv  6. Bxf7+    -> Kxf7     wins  3p   was   +78cp  better: Be2
+    mv 14. Nxe4     -> Bxe4     wins  3p   was   -33cp  better: d5
+    mv 11. Nxf6+    -> Bxf6     wins  3p   was  +494cp  better: Bf4
+    mv  9. Bxf7+    -> Kxf7     wins  3p   was  +169cp  better: h3
+    mv  6. Bxf7+    -> Kxf7     wins  3p   was   +87cp  better: Bb3
+    mv 11. Nxc7+    -> Qxc7     wins  3p   was  +499cp  better: Bxd5
+    mv 15. Qh3      -> Nxg5     wins  3p   was  +443cp  better: Bxe6
+    mv 15. Bc5      -> Nxc5     wins  3p   was   -60cp  better: Bd4
+    mv 15. Bxf5     -> Nxf5     wins  3p   was  +154cp  better: Bxb7
+    mv  7. Nxe5     -> Nxe5     wins  3p   was  +147cp  better: Bxf7
+
+done.

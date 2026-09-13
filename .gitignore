@@ -110,3 +110,19 @@ db/*.db-shm
 
 # Claude Code local state
 .claude/
+
+# --- generated artifacts (added 2026-09-12) ---
+# Verification screenshots and rendered report images: regenerable from the
+# scripts, and 40MB of binaries does not belong in history.
+web/.screenshots/
+worker/reports/**/*.png
+worker/reports/*.pdf
+worker/reports/*.html
+!worker/reports/2026-08-20/report.html
+
+# One-off diagnostic probes written during an investigation. Underscore prefix
+# marks them as scratch; the engine-timeout test is kept because it guards a
+# real regression.
+worker/_*.py
+!worker/_test_engine_timeout.py
+worker/_archive/

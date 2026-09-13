@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Zap, Target, Castle, BarChart3 } from 'lucide-react'
+import { Zap, Target, Castle, BarChart3, Repeat } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Breadcrumbs from '@/components/layout/Breadcrumbs'
 import TacticalInsights from '@/components/insights/TacticalInsights'
@@ -23,7 +23,7 @@ const categories = [
     id: 'recurring' as const,
     title: 'Recurring Patterns',
     description: 'Your most persistent weaknesses across games — the patterns worth focusing on to improve fastest',
-    icon: '🔄',
+    icon: Repeat,
     color: 'amber',
     bgColor: 'bg-amber-50',
     borderColor: 'border-amber-200',

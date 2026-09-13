@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getBaseOpeningName } from '@/lib/openings'
+import { fetchInGameIdChunks, type RangeableQuery } from '@/lib/queryChunks'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,15 +46,23 @@ export async function GET(request: Request) {
     // Get all game IDs
     const gameIds = games.map(g => g.id)
 
-    // Get move statistics for these games
-    const { data: moves, error: movesError } = await supabase
-      .from('moves')
-      .select('game_id, classification, eval_delta')
-      .in('game_id', gameIds)
-
-    if (movesError) {
-      throw movesError
-    }
+    // Fetch moves in game-id batches. A single .in('game_id', gameIds) with
+    // every game (880+) builds a ~33 KB URL and PostgREST rejects it with
+    // "Bad Request", which is why this route was returning 500.
+    const moves = await fetchInGameIdChunks<{
+      game_id: string
+      classification: string | null
+      eval_delta: number | null
+    }>(gameIds, (chunk) =>
+      supabase
+        .from('moves')
+        .select('game_id, classification, eval_delta')
+        .in('game_id', chunk) as unknown as RangeableQuery<{
+        game_id: string
+        classification: string | null
+        eval_delta: number | null
+      }>
+    )
 
     // Group stats by opening
     const openingStats: Record<string, {

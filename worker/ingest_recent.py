@@ -9,6 +9,7 @@ import sys
 import requests
 import chess
 import chess.pgn
+import asyncio
 import chess.engine
 import psycopg2
 from datetime import datetime
@@ -21,16 +22,51 @@ STOCKFISH_PATH = '/opt/homebrew/bin/stockfish'
 MOVE_TIME = 0.5  # seconds per move analysis
 DEPTH = int(os.getenv('STOCKFISH_DEPTH', 18))
 
+# python-chess only applies a timeout to an engine call when the Limit carries a
+# `time` — SimpleEngine._timeout_for() returns None for a depth-only limit, so
+# `analyse()` waits forever if Stockfish stalls or its pipe dies. That is what
+# wedged the nightly run for days at a time. Giving the Limit a time ceiling as
+# well as a depth restores the timeout; Stockfish stops at whichever it reaches
+# first, so normal positions are unaffected.
+ANALYSIS_TIME_CAP = float(os.getenv('STOCKFISH_TIME_CAP', 5.0))
+ENGINE_TIMEOUT = float(os.getenv('STOCKFISH_ENGINE_TIMEOUT', 15.0))
+
+
+def analysis_limit():
+    return chess.engine.Limit(depth=DEPTH, time=ANALYSIS_TIME_CAP)
+
+
+def start_engine():
+    engine = chess.engine.SimpleEngine.popen_uci(
+        STOCKFISH_PATH, timeout=ENGINE_TIMEOUT)
+    engine.configure({'Threads': 2, 'Hash': 256})
+    return engine
+
 
 def connect_db():
-    return psycopg2.connect(
+    # A worker that wedges mid-game (Stockfish not returning, network stall)
+    # used to leave its transaction open indefinitely. Postgres keeps the locks
+    # while it waits, which blocks schema changes and anything else touching
+    # those rows — one hung run held locks for 11 hours. These timeouts make an
+    # abandoned transaction release itself instead.
+    conn = psycopg2.connect(
         host=os.getenv('SUPABASE_HOST'),
         port=int(os.getenv('SUPABASE_PORT', 6543)),
         dbname=os.getenv('SUPABASE_DB'),
         user=os.getenv('SUPABASE_USER'),
         password=os.getenv('SUPABASE_PASSWORD'),
         sslmode='require',
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=3,
     )
+    # Supavisor drops libpq's `options` startup parameter, so the timeout has
+    # to be set as a statement once the session is up.
+    with conn.cursor() as cur:
+        cur.execute("SET idle_in_transaction_session_timeout = '300s'")
+    conn.commit()
+    return conn
 
 
 def get_existing_game_ids(conn):
@@ -189,12 +225,12 @@ def analyze_and_store(conn, game_data, engine):
         fen_before = board.fen()
 
         # Get engine eval before
-        info_before = engine.analyse(board, chess.engine.Limit(depth=DEPTH))
+        info_before = engine.analyse(board, analysis_limit())
         score_before = info_before['score'].white()
         eval_before = score_before.score(mate_score=10000) if score_before else 0
 
         # Get best move
-        best_result = engine.play(board, chess.engine.Limit(depth=DEPTH))
+        best_result = engine.play(board, analysis_limit())
         best_move = best_result.move
 
         # Make the actual move
@@ -213,7 +249,7 @@ def analyze_and_store(conn, game_data, engine):
         board.push(move)
 
         # Get engine eval after
-        info_after = engine.analyse(board, chess.engine.Limit(depth=DEPTH))
+        info_after = engine.analyse(board, analysis_limit())
         score_after = info_after['score'].white()
         eval_after = score_after.score(mate_score=10000) if score_after else 0
 
@@ -255,8 +291,7 @@ NUM_WORKERS = 4
 def worker_fn(worker_id, game_batch, existing_ids):
     """Each worker gets its own DB connection and Stockfish engine."""
     conn = connect_db()
-    engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
-    engine.configure({'Threads': 2, 'Hash': 256})
+    engine = start_engine()
 
     done = 0
     errors = 0
@@ -269,13 +304,36 @@ def worker_fn(worker_id, game_batch, existing_ids):
             try:
                 analyze_and_store(conn, game_data, engine)
                 done += 1
+            except (chess.engine.EngineTerminatedError,
+                    chess.engine.EngineError,
+                    TimeoutError, asyncio.TimeoutError) as e:
+                # The engine is no longer trustworthy: replace it rather than
+                # feeding every remaining game to a broken process.
+                print(f"  [W{worker_id}] Engine fault on {gid}: {e!r} — restarting",
+                      flush=True)
+                conn.rollback()
+                errors += 1
+                try:
+                    engine.close()
+                except Exception:
+                    pass
+                try:
+                    engine = start_engine()
+                except Exception as restart_err:
+                    print(f"  [W{worker_id}] Could not restart engine: {restart_err!r}",
+                          flush=True)
+                    break
+                continue
             except Exception as e:
                 print(f"  [W{worker_id}] Error: {e}", flush=True)
                 conn.rollback()
                 errors += 1
                 continue
     finally:
-        engine.quit()
+        try:
+            engine.quit()
+        except Exception:
+            pass
         conn.close()
 
     print(f"  [W{worker_id}] Finished: {done} games, {errors} errors", flush=True)

@@ -8,6 +8,12 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
 
+from see import avoidable_drop
+
+# Avoidable material loss, in pawns, that counts as leaving a piece hanging.
+# A single dropped pawn is too common to be a useful category on its own.
+MIN_HANGING_DROP = 2
+
 
 class BlunderCategory(Enum):
     HANGING_PIECE = "hanging_piece"
@@ -174,33 +180,25 @@ class BlunderClassifier:
     def _check_overlooked_check(
         self, board_before: chess.Board, move: chess.Move, board_after: chess.Board
     ) -> Optional[Dict]:
-        """Check if player missed a check or allowed checkmate"""
+        """Check if the move allowed the opponent an immediate checkmate.
 
-        # Did opponent have checkmate that wasn't blocked?
-        board_before.push(move)
-        if board_before.is_checkmate():
-            board_before.pop()
-            return None  # Player delivered checkmate, not a blunder
-
-        # Check if opponent now has checkmate
-        if board_after.is_checkmate():
-            return {
-                "confidence": 0.95,
-                "details": {"allowed_checkmate": True},
-                "explanation": "Move allowed immediate checkmate"
-            }
-
-        # Check if opponent has check that leads to material loss
-        for response in board_after.legal_moves:
-            if board_after.is_check():
+        board_after has the opponent to move, so the question is whether any of
+        their replies mates. (board_after.is_check() would instead ask whether
+        *our* move gave check, which is how safe checks used to land here.)
+        """
+        for reply in board_after.legal_moves:
+            if not board_after.gives_check(reply):
+                continue
+            board_after.push(reply)
+            mated = board_after.is_checkmate()
+            board_after.pop()
+            if mated:
+                mating_san = board_after.san(reply)
                 return {
-                    "confidence": 0.8,
-                    "details": {"walked_into_check_sequence": True},
-                    "explanation": "Overlooked check sequence"
+                    "confidence": 0.95,
+                    "details": {"allowed_checkmate": True, "mating_move": mating_san},
+                    "explanation": f"Move allowed immediate checkmate ({mating_san})"
                 }
-                break
-
-        board_before.pop()
         return None
 
     def _check_back_rank(
@@ -251,31 +249,34 @@ class BlunderClassifier:
     def _check_hanging_piece(
         self, board_before: chess.Board, move: chess.Move, board_after: chess.Board
     ) -> Optional[Dict]:
-        """Check if a piece was left hanging (undefended)"""
+        """Check if the move gave away material another legal move would have kept.
 
-        turn = board_before.turn
+        "Is any piece attacked and undefended after the move" blames the move for
+        material that was already lost, counts attacks by pinned pieces, and
+        misses defended pieces that still lose to a cheaper attacker. Static
+        exchange evaluation against every alternative move answers the real
+        question instead.
+        """
+        dropped, capture_san, _gross, _unavoidable = avoidable_drop(board_before, move)
+        if dropped < MIN_HANGING_DROP:
+            return None
 
-        # Check all player's pieces after the move
-        for square in chess.SQUARES:
-            piece = board_after.piece_at(square)
-            if piece and piece.color == turn and piece.piece_type != chess.KING:
-                # Is this piece attacked?
-                attackers = board_after.attackers(not turn, square)
-                if attackers:
-                    # Is it defended?
-                    defenders = board_after.attackers(turn, square)
-                    if not defenders:
-                        piece_value = self._piece_value(piece.piece_type)
-                        return {
-                            "confidence": 0.9,
-                            "details": {
-                                "hanging_piece": piece.symbol().upper(),
-                                "square": chess.square_name(square),
-                                "piece_value": piece_value
-                            },
-                            "explanation": f"{piece.symbol().upper()} on {chess.square_name(square)} left undefended"
-                        }
-        return None
+        capture = board_after.parse_san(capture_san)
+        piece = board_after.piece_at(capture.to_square)
+        symbol = piece.symbol().upper() if piece else "P"
+        square = chess.square_name(capture.to_square)
+        return {
+            "confidence": 0.9,
+            "details": {
+                "hanging_piece": symbol,
+                "square": square,
+                "piece_value": self._piece_value(piece.piece_type) if piece else 100,
+                "material_dropped": dropped,
+                "punished_by": capture_san,
+            },
+            "explanation": f"{symbol} on {square} can be won by {capture_san}; "
+                           f"another move would have kept {dropped} pawns of material"
+        }
 
     def _check_greedy_capture(
         self, board_before: chess.Board, move: chess.Move, board_after: chess.Board,

@@ -13,6 +13,7 @@ import {
   ChevronDown,
   User,
   Search,
+  SlidersHorizontal,
   TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -41,6 +42,12 @@ const mainNavItems: NavItem[] = [
     label: 'Mistakes',
     icon: AlertTriangle,
     matchPrefixes: ['/mistakes'],
+  },
+  {
+    href: '/explorer',
+    label: 'Explorer',
+    icon: SlidersHorizontal,
+    matchPrefixes: ['/explorer'],
   },
   {
     href: '/drill',

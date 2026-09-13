@@ -1,0 +1,242 @@
+
+==============================================================================
+SCOPE — last 50 games as Black
+==============================================================================
+  50 games  2026-06-13 .. 2026-08-19
+  W/L/D as Black: 24/24/2   score 50.0%
+
+  by time control (tc / games / wins / draws / score%):
+    5+5         46   22   2    50.0%
+    2+1          2    0   0     0.0%
+    10+5         1    1   0   100.0%
+    3+2          1    1   0   100.0%
+
+==============================================================================
+REPERTOIRE — what Black actually plays (parsed from PGN)
+==============================================================================
+  White's first move faced:
+    e4      38
+    d4       9
+    f4       1
+    Nf3      1
+    c4       1
+
+  Black's reply (games / score%):
+    e4 e5           38    52.6%
+    d4 d5            9    44.4%
+    f4 d5            1     0.0%
+    Nf3 d5           1   100.0%
+    c4 e5            1     0.0%
+
+  most common 3-move lines (>=2 games):
+    x11  e4 e5 Nf3 Nc6 Bc4 Nf6
+    x6  e4 e5 Nf3 Nc6 Bb5 a6
+    x3  e4 e5 Nf3 Nc6 Nc3 Bc5
+    x3  e4 e5 Nf3 Nc6 d4 exd4
+    x2  d4 d5 c4 Nf6 Nc3 e6
+    x2  e4 e5 f4 exf4 Nf3 d5
+
+==============================================================================
+PERFORMANCE BY OPENING (as Black, name from PGN ECOUrl)
+==============================================================================
+
+  by full opening name
+  line                                             n  score%  ACPL  mis/g  bl/g
+  Four Knights Game Italian Variation              2    0.0%    84   2.00  1.50
+  Giuoco Piano Game Giuoco Pianissimo Variation    2  100.0%    78   1.50  3.00
+  Kings Gambit Accepted Modern Defense 4.exd5      2  100.0%   141   1.50  6.50
+  Kings Pawn Opening 1...e5                        2    0.0%    42   1.00  1.00
+  Ruy Lopez Opening Morphy Defense Columbus Vari   2  100.0%    45   0.50  0.50
+  Birds Opening Dutch Variation 2.Nf3 Bg4 3.e3     1    0.0%    59   4.00  0.00
+  Bishops Opening 2...Nc6                          1  100.0%    53   4.00  0.00
+  Bishops Opening 2...Nc6 3.d3                     1    0.0%    63   0.00  2.00
+  Bishops Opening 2...Nc6 3.d3 Nf6                 1    0.0%   151   3.00  5.00
+  Bishops Opening Berlin Defense 3.d3 Bc5 4.Nf3    1    0.0%    36   0.00  0.00
+  Bishops Opening Berlin Vienna Hybrid Variation   1    0.0%   196   1.00  3.00
+  Center Game Accepted                             1  100.0%   195   4.00  9.00
+  Danish Gambit                                    1  100.0%    50   1.00  1.00
+  English Opening Kings English Variation 2.e3     1    0.0%    70   1.00  2.00
+  Giuoco Piano Game Giuoco Pianissimo Italian Fo   1  100.0%   206   4.00  5.00
+  Giuoco Piano Game Giuoco Pianissimo Variation    1    0.0%   131   6.00  5.00
+  Giuoco Piano Game Giuoco Pianissimo Variation    1    0.0%   101   2.00  3.00
+  Giuoco Piano Game Main Line Giuoco Pianissimo    1  100.0%    35   2.00  0.00
+  Italian Game Knight Attack Normal Variation      1  100.0%    45   3.00  2.00
+  Italian Game Knight Attack Polerio Bishop Chec   1   50.0%   154   4.00 17.00
+  Italian Game Knight Attack Polerio Defense       1    0.0%   101   2.00  1.00
+  Italian Game Two Knights Modern Bishops Openin   1  100.0%   179   6.00 11.00
+  Kings Indian Attack 2...Nc6 3.Bg2 e5 4.O O       1  100.0%    25   1.00  0.00
+  London System                                    1  100.0%    32   1.00  0.00
+  London System 3...Bf5 4.e3 e6                    1  100.0%    97   2.00  4.00
+  Nimzo Indian Defense Normal Line 4...O O 5.Bd2   1    0.0%    60   0.00  2.00
+  Queens Gambit Declined Marshall Defense 3.cxd5   1    0.0%    88   1.00  2.00
+  Queens Gambit Declined Ragozin Defense 5.e3 O    1    0.0%    59   4.00  0.00
+  Queens Pawn Opening 1...d5 2.e3 Nf6 3.c4         1  100.0%    19   0.00  0.00
+  Queens Pawn Opening Accelerated London System    1  100.0%   115   6.00  3.00
+  Queens Pawn Opening Chigorin Variation 2...Nf6   1    0.0%   289   4.00 16.00
+  Queens Pawn Opening Zukertort Chigorin Variati   1    0.0%    36   1.00  0.00
+  Ruy Lopez Opening Morphy Defense Caro Variatio   1  100.0%   136   1.00  6.00
+  Ruy Lopez Opening Morphy Defense Columbus Vari   1  100.0%    26   0.00  1.00
+  Ruy Lopez Opening Morphy Defense Exchange Vari   1  100.0%   212   1.00  8.00
+  Ruy Lopez Opening Morphy Defense Exchange Vari   1  100.0%   121   0.00  4.00
+  Scotch Game 3...exd4 4.Nxd4 Nxd4 5.Qxd4          1  100.0%    37   1.00  0.00
+  Scotch Game Classical Variation 5.Be3            1    0.0%    61   5.00  0.00
+  Scotch Game Classical Variation 5.Nxc6 bxc6      1    0.0%   113   4.00  5.00
+  Scotch Game Scotch Gambit Dubois Reti Defense    1    0.0%   171   0.00  1.00
+  Three Knights Opening 3...Bc5                    1   50.0%   139   5.00  6.00
+  Three Knights Opening 3...Bc5 4.Nxe5 Nxe5 5.d4   1    0.0%   186   0.00  2.00
+  Three Knights Opening Schlechter Variation       1    0.0%    50   2.00  1.00
+  Vienna Game                                      1  100.0%   121   3.00  4.00
+  Vienna Game Anderssen Defense 3.Bc4 Nf6          1    0.0%    97   1.00  3.00
+
+  by opening family (first 3 words)
+  line                                             n  score%  ACPL  mis/g  bl/g
+  Giuoco Piano Game                                6   66.7%   104   2.83  3.17
+  Ruy Lopez Opening                                6  100.0%   116   0.50  3.33
+  Queens Pawn Opening                              4   50.0%   155   2.75  4.75
+  Bishops Opening 2...Nc6                          3   33.3%    95   2.33  2.33
+  Italian Game Knight                              3   50.0%   110   3.00  6.67
+  Three Knights Opening                            3   16.7%   102   2.33  3.00
+  Bishops Opening Berlin                           2    0.0%    92   0.50  1.50
+  Four Knights Game                                2    0.0%    84   2.00  1.50
+  Kings Gambit Accepted                            2  100.0%   141   1.50  6.50
+  Kings Pawn Opening                               2    0.0%    42   1.00  1.00
+  Queens Gambit Declined                           2    0.0%    71   2.50  1.00
+  Scotch Game Classical                            2    0.0%    93   4.50  2.50
+
+==============================================================================
+PERFORMANCE BY ECO FAMILY (as Black)
+==============================================================================
+  fam   n  score%  ACPL  blunders mistakes
+  C2    11   36.4    517      29      19
+  C5    10   65.0    380      50      32
+  C4     9   16.7    286      18      21
+  D0     7   57.1    454      25      15
+  C7     4  100.0    375       8       2
+  C3     2  100.0    515      13       3
+  C6     2  100.0    865      12       1
+  A0     2   50.0     43       0       5
+
+==============================================================================
+ERROR PROFILE — Black's own moves
+==============================================================================
+  Black moves analyzed: 1600   ACPL (capped 1000) 109
+  good 1116 (69.8%)  inacc 222 (13.9%)  mistake 103 (6.4%)  blunder 159 (9.9%)
+  per game: 2.06 mistakes, 3.18 blunders
+
+  --- by phase ---
+  opening     moves=  726 mistakes= 37 blunders= 23 err= 8.3% ACPL=81
+  middlegame  moves=  677 mistakes= 58 blunders= 91 err=22.0% ACPL=620
+  endgame     moves=  197 mistakes=  8 blunders= 45 err=26.9% ACPL=830
+
+  --- by move-number band ---
+  moves 1-10   moves=  492 errors= 31 ( 6.3%) ACPL=72
+  moves 11-20  moves=  440 errors= 59 (13.4%) ACPL=215
+  moves 21-30  moves=  305 errors= 63 (20.7%) ACPL=458
+  moves 31-40  moves=  166 errors= 56 (33.7%) ACPL=1262
+  move 41+     moves=  197 errors= 53 (26.9%) ACPL=830
+
+  --- by piece moved (mistakes+blunders) ---
+  R   moves=  267 errors= 56 (21.0%) ACPL=597
+  P   moves=  388 errors= 54 (13.9%) ACPL=296
+  K   moves=  187 errors= 46 (24.6%) ACPL=575
+  Q   moves=  202 errors= 41 (20.3%) ACPL=657
+  N   moves=  313 errors= 36 (11.5%) ACPL=247
+  B   moves=  243 errors= 29 (11.9%) ACPL=207
+
+  --- blunder categories ---
+  hanging_piece          x201 avg -2143cp   (op 46 / mg 111 / eg 44)
+  greedy_capture         x29  avg -2044cp   (op 7 / mg 20 / eg 2)
+  overlooked_check       x26  avg -4591cp   (op 4 / mg 15 / eg 7)
+  positional_collapse    x6   avg -173cp   (op 3 / mg 3 / eg 0)
+
+  --- tactical motifs on error moves ---
+
+  --- positional patterns on error moves ---
+
+==============================================================================
+RECURRING EXACT MISTAKES (same move number + same SAN, >=2x)
+==============================================================================
+  move 17. Rae8     [R] x2  avg -4799cp  blunders=1  better: fxe5, Rxf3+
+  move 17. b5       [P] x2  avg -4713cp  blunders=1  better: Ng6, Ree2
+  move 20. Qh4      [Q] x2  avg -914cp  blunders=2  better: Rg3, Rxf3+
+  move 15. exd4     [P] x2  avg -504cp  blunders=1  better: Be7, Bf3
+  move 13. Qd7      [Q] x2  avg -466cp  blunders=1  better: Kg7, Qd6
+  move 10. O-O      [K] x2  avg -152cp  blunders=0  better: b5, Bxf3
+
+==============================================================================
+RECURRING MISTAKE SQUARES / MOVE TYPES (SAN ignoring move number, >=3x)
+==============================================================================
+  f5        x5   avg -615cp  (moves 14-62)
+  Rg8       x4   avg -2625cp  (moves 28-35)
+  Kd7       x4   avg -495cp  (moves 8-67)
+  Ke6       x4   avg -282cp  (moves 28-44)
+  Ke7       x4   avg -4871cp  (moves 45-54)
+  Ke8       x4   avg -3242cp  (moves 11-53)
+  Kf6       x4   avg -3115cp  (moves 27-66)
+  O-O       x4   avg -175cp  (moves 8-11)
+  Qd7       x4   avg -2528cp  (moves 11-16)
+  Rd8       x4   avg -9873cp  (moves 15-40)
+  b5        x3   avg -3224cp  (moves 17-35)
+  d5        x3   avg -3222cp  (moves 7-15)
+  c6        x3   avg -254cp  (moves 11-27)
+  g4        x3   avg -2018cp  (moves 19-40)
+  h6        x3   avg -5100cp  (moves 13-47)
+  Kc8       x3   avg -3081cp  (moves 29-66)
+  Qh4       x3   avg -828cp  (moves 15-20)
+  Ng6       x3   avg -328cp  (moves 10-21)
+  Rae8      x3   avg -3341cp  (moves 17-18)
+
+==============================================================================
+OPENING HEALTH — Black's eval after move 10 / 15 / 20 (Black POV, cp)
+==============================================================================
+  after Black's move 10: n= 47  avg   -19cp   worse than -1.00 in 15 games   below -3.00 in 4
+  after Black's move 15: n= 46  avg  -204cp   worse than -1.00 in 19 games   below -3.00 in 9
+  after Black's move 20: n= 38  avg   -35cp   worse than -1.00 in 16 games   below -3.00 in 12
+
+  --- openings where Black is already worse by move 12 (avg Black-POV cp) ---
+    C21  Unknown                                      n= 2   -272cp
+    C45  Unknown                                      n= 3   -157cp
+    C47  Unknown                                      n= 2   -142cp
+    C20  Unknown                                      n= 2    -94cp
+    C23  Unknown                                      n= 3    -88cp
+    D02  Unknown                                      n= 3    -58cp
+    C78  Unknown                                      n= 3    -21cp
+    D00  Unknown                                      n= 3     +1cp
+    C36  Unknown                                      n= 2   +157cp
+    C46  Unknown                                      n= 2   +161cp
+    C25  Unknown                                      n= 2   +168cp
+    C50  Unknown                                      n= 5   +255cp
+    C68  Unknown                                      n= 2   +310cp
+
+==============================================================================
+DECISIVE ERRORS — the move that lost each lost game
+==============================================================================
+  (largest blunder per lost game)
+  mv  8. Nb4      -9570 cp   -429 -> -9999  hanging_piece        opening     better:Qxh6    [Unknown]
+  mv 15. exd4     -850  cp   +555 ->  -295  greedy_capture       opening     better:Bf3     [Unknown]
+  mv 31. Kf8      -9412 cp   -587 -> -9999  hanging_piece        middlegame  better:Re6     [Unknown]
+  mv 17. Qxf3     -598  cp     +3 ->  -595  greedy_capture       middlegame  better:Nxc4    [Unknown]
+  mv 22. Bf4+     -616  cp   +390 ->  -226  hanging_piece        middlegame  better:Rxc3    [Unknown]
+  mv 23. Bc2      -442  cp   +442 ->    +0  hanging_piece        middlegame  better:Rb8     [Unknown]
+  mv  8. Bf6      -309  cp    -27 ->  -336  hanging_piece        opening     better:Bd8     [Unknown]
+  mv 22. Kh8      -358  cp   -646 -> -1004  hanging_piece        middlegame  better:Rxd5    [Unknown]
+  mv  7. f6       -401  cp    -27 ->  -428  hanging_piece        opening     better:Qxg5    [Unknown]
+  mv 37. Ne4+     -514  cp     +0 ->  -514  hanging_piece        middlegame  better:Rf8     [Unknown]
+  mv 47. h6       -5110 cp  -1101 -> -6211  hanging_piece        endgame     better:Rf8     [Unknown]
+  mv 54. Ke7      -6779 cp  -3202 -> -9981  hanging_piece        endgame     better:Ke7     [Unknown]
+  mv 18. Qc5      -10225cp   +226 -> -9999  hanging_piece        middlegame  better:Be6     [Unknown]
+  mv 24. f6       -457  cp   -510 ->  -967  hanging_piece        middlegame  better:Rf8     [Unknown]
+  mv 43. Ne3+     -1870 cp  -8115 -> -9985  hanging_piece        endgame     better:Kh6     [Unknown]
+  mv 15. d5       -9184 cp   -811 -> -9995  hanging_piece        opening     better:Rd8     [Unknown]
+  mv  6. Nxd4     -10159cp   +160 -> -9999  greedy_capture       opening     better:d5      [Unknown]
+  mv 23. Nd7      -9541 cp   -458 -> -9999  hanging_piece        middlegame  better:Qd8     [Unknown]
+  lost games with an identified blunder: 18
+
+==============================================================================
+SWING SIZE — where the games actually turn
+==============================================================================
+  Black was better (+1 or more)    x150  avg -2901cp
+  Black already worse              x64   avg -2483cp
+  roughly equal                    x48   avg -341cp
+
+done.

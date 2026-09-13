@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { fetchInGameIdChunks, type RangeableQuery } from '@/lib/queryChunks'
 
 interface PositionMove {
   id: string
@@ -63,31 +64,18 @@ export async function GET(request: Request) {
         gamePlayedAt[game.id] = game.played_at
       }
 
-      // Get all moves - need to paginate since Supabase limits to 1000 rows
-      let allMoves: PositionMove[] = []
-      const pageSize = 1000
-      let offset = 0
-      let hasMore = true
-
-      while (hasMore) {
-        const { data: pageMoves, error: movesError } = await supabase
+      // Fetch in game-id batches. Passing every game id to a single
+      // .in('game_id', ...) builds a ~33 KB URL that PostgREST rejects with
+      // "Bad Request"; the helper batches the ids and paginates within each
+      // batch, so this no longer depends on staying under the row cap either.
+      const allMoves = await fetchInGameIdChunks<PositionMove>(gameIds, (chunk) =>
+        supabase
           .from('moves')
           .select('id, game_id, ply, move_san, classification, eval_delta, piece_moved, phase, position_fen, best_move_san')
-          .in('game_id', gameIds)
+          .in('game_id', chunk)
           .order('game_id')
-          .order('ply')
-          .range(offset, offset + pageSize - 1)
-
-        if (movesError) throw movesError
-
-        if (pageMoves && pageMoves.length > 0) {
-          allMoves = allMoves.concat(pageMoves)
-          offset += pageSize
-          hasMore = pageMoves.length === pageSize
-        } else {
-          hasMore = false
-        }
-      }
+          .order('ply') as unknown as RangeableQuery<PositionMove>
+      )
 
       if (allMoves.length === 0) {
         return NextResponse.json([])
