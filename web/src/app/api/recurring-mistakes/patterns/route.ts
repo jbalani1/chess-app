@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { fetchInGameIdChunks, type RangeableQuery } from '@/lib/queryChunks'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,31 +84,18 @@ export async function GET(request: Request) {
       blunder_details: { explanation?: string } | null
     }
 
-    // Fetch all moves with pagination
-    let allMoves: MoveRecord[] = []
-    const pageSize = 1000
-    let offset = 0
-    let hasMore = true
-
-    while (hasMore) {
-      const { data: pageMoves, error: movesError } = await supabase
+    // Fetch in game-id batches. A single .in('game_id', gameIds) with every
+    // game (900+) builds a ~33 KB URL that PostgREST rejects with "Bad
+    // Request" — this route was returning 500. fetchInGameIdChunks batches the
+    // ids and paginates within each batch, so the row cap is handled too.
+    const allMoves = await fetchInGameIdChunks<MoveRecord>(gameIds, (chunk) =>
+      supabase
         .from('moves')
         .select('id, game_id, ply, move_san, classification, eval_delta, piece_moved, phase, position_fen, best_move_san, blunder_category, blunder_details')
-        .in('game_id', gameIds)
+        .in('game_id', chunk)
         .order('game_id')
-        .order('ply')
-        .range(offset, offset + pageSize - 1)
-
-      if (movesError) throw movesError
-
-      if (pageMoves && pageMoves.length > 0) {
-        allMoves = allMoves.concat(pageMoves as MoveRecord[])
-        offset += pageSize
-        hasMore = pageMoves.length === pageSize
-      } else {
-        hasMore = false
-      }
-    }
+        .order('ply') as unknown as RangeableQuery<MoveRecord>
+    )
 
     if (allMoves.length === 0) return NextResponse.json([])
 
