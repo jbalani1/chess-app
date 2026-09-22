@@ -2,6 +2,7 @@
 Unit tests for the game ingestion module
 """
 
+import itertools
 import unittest
 import sys
 import os
@@ -248,6 +249,85 @@ class TestChessComIngester(unittest.TestCase):
             except chess.InvalidMoveError:
                 # Skip invalid moves in the test position
                 continue
+
+
+class TestBlunderClassifierWiring(unittest.TestCase):
+    """analyze_game_moves used to hand the classifier the best move for the
+    position *after* the played move, i.e. the opponent's reply, so the move it
+    was told to judge as "what you should have played" belonged to the other
+    side and was not even legal in the position supplied alongside it."""
+
+    PGN = """
+[Event "Test Game"]
+[White "opponent"]
+[Black "testuser"]
+[Result "0-1"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 0-1
+"""
+
+    def setUp(self):
+        with patch('ingest.psycopg2.connect'):
+            with patch('ingest.get_engine'):
+                self.ingester = ChessComIngester()
+
+        engine = Mock()
+        # Always name a real best move for whatever position it is handed, and a
+        # distinct eval per call so eval_before and eval_after cannot coincide
+        # and hide a mix-up between them.
+        evals = itertools.count(40, 7)
+
+        def analyze(fen, *args, **kwargs):
+            return {
+                'eval': next(evals),
+                'best_move': next(iter(chess.Board(fen).legal_moves)).uci(),
+            }
+
+        engine.analyze_position_with_best_move.side_effect = analyze
+        engine.classify_move.return_value = 'blunder'
+        engine.get_phase.return_value = 'middlegame'
+        engine.get_piece_moved.return_value = 'P'
+        self.ingester.engine = engine
+
+    def test_classifier_is_given_a_move_legal_in_the_position_it_is_given(self):
+        game = self.ingester.parse_pgn_game(self.PGN)
+        self.assertIsNotNone(game)
+
+        with patch('ingest.classify_move_blunder') as classify:
+            classify.return_value = {
+                'category': 'positional_collapse',
+                'confidence': 0.5,
+                'explanation': '',
+                'details': {},
+            }
+            self.ingester.analyze_game_moves(game, 'testuser')
+
+        self.assertTrue(classify.called, 'classifier was never reached')
+        for call in classify.call_args_list:
+            fen = call.kwargs['position_fen']
+            best = call.kwargs['best_move_uci']
+            self.assertIsNotNone(best)
+            self.assertIn(
+                chess.Move.from_uci(best), chess.Board(fen).legal_moves,
+                f'best move {best} is not legal in {fen}',
+            )
+
+    def test_classifier_is_given_the_eval_of_the_position_it_is_given(self):
+        """best_move_eval was analysis_result['eval'], which is eval_after, so
+        the "a better move existed" test compared eval_after to itself."""
+        game = self.ingester.parse_pgn_game(self.PGN)
+
+        with patch('ingest.classify_move_blunder') as classify:
+            classify.return_value = {
+                'category': 'positional_collapse',
+                'confidence': 0.5,
+                'explanation': '',
+                'details': {},
+            }
+            self.ingester.analyze_game_moves(game, 'testuser')
+
+        for call in classify.call_args_list:
+            self.assertEqual(call.kwargs['best_move_eval'], call.kwargs['eval_before'])
 
 
 class TestPGNParsing(unittest.TestCase):

@@ -8,11 +8,20 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
 
-from see import avoidable_drop
+from see import avoidable_drop, see_capture
 
 # Avoidable material loss, in pawns, that counts as leaving a piece hanging.
 # A single dropped pawn is too common to be a useful category on its own.
 MIN_HANGING_DROP = 2
+
+# How much better the engine's move had to be, in centipawns, before the move
+# played counts as having missed something.
+MIN_MISSED_GAIN = 150
+
+# Free material the engine's move would have won, in pawns, before "you left
+# material on the board" is worth saying. Same reasoning as MIN_HANGING_DROP:
+# a single pawn is too common to be a useful category.
+MIN_MISSED_MATERIAL = 2
 
 
 class BlunderCategory(Enum):
@@ -149,8 +158,8 @@ class BlunderClassifier:
                 explanation="Endgame technique error - review endgame principles"
             )
 
-        # 8. Missed tactic (if we had a winning move)
-        if best_move and best_move_eval and (best_move_eval - eval_after) > 150:
+        # 8. Missed tactic (a named tactic was available and was not played)
+        if best_move and self._better_move_existed(board_before, eval_after, best_move_eval):
             result = self._check_missed_tactic(board_before, best_move)
             if result:
                 return BlunderClassification(
@@ -176,6 +185,23 @@ class BlunderClassifier:
             details=details,
             explanation="Position deteriorated without clear tactical cause"
         )
+
+    @staticmethod
+    def _better_move_existed(
+        board_before: chess.Board, eval_after: int, best_move_eval: Optional[int]
+    ) -> bool:
+        """Did the engine's move keep at least 150cp more than the move played?
+
+        Evals are White-centric, so the comparison has to be flipped when Black
+        is the one moving. Without the flip this test was inverted for Black,
+        who is the side most of the analysed games were played as.
+        """
+        if best_move_eval is None:
+            return False
+        kept = best_move_eval - eval_after
+        if board_before.turn == chess.BLACK:
+            kept = -kept
+        return kept > MIN_MISSED_GAIN
 
     def _check_overlooked_check(
         self, board_before: chess.Board, move: chess.Move, board_after: chess.Board
@@ -347,48 +373,89 @@ class BlunderClassifier:
     def _check_missed_tactic(
         self, board: chess.Board, best_move: chess.Move
     ) -> Optional[Dict]:
-        """Determine what type of tactic was missed"""
+        """Name the tactic the engine's move would have played, or return None.
 
-        board_copy = board.copy()
-        board_copy.push(best_move)
+        Returning None matters. The previous version ended in a
+        `{"tactic_type": "unknown"}` fallback, so once a better move existed the
+        category was always assigned — which is true of nearly every error and
+        therefore says nothing. `hanging_piece` was already spoiled by exactly
+        that, so anything this cannot name falls through to calculation_error or
+        positional_collapse instead.
 
-        tactic_type = None
+        Two things it will name:
+          - a mate, or a fork the moved piece actually profits from, verified by
+            static exchange evaluation rather than by piece type alone;
+          - material that was free for the taking and was left on the board.
+        """
+        after = board.copy(stack=False)
+        after.push(best_move)
 
-        # Check if best move was a fork
-        moved_piece = board.piece_at(best_move.from_square)
-        if moved_piece:
-            attacks_after = list(board_copy.attacks(best_move.to_square))
-            valuable_attacks = []
-            for sq in attacks_after:
-                target = board_copy.piece_at(sq)
-                if target and target.color != moved_piece.color:
-                    if target.piece_type in [chess.QUEEN, chess.ROOK, chess.KING]:
-                        valuable_attacks.append(chess.square_name(sq))
-            if len(valuable_attacks) >= 2:
-                tactic_type = "fork"
-
-        # Check if best move was a discovered attack
-        # (piece moves, revealing attack from another piece)
-
-        # Check if best move delivered check
-        if board_copy.is_check():
-            if tactic_type:
-                tactic_type = f"{tactic_type}_with_check"
-            else:
-                tactic_type = "check_tactic"
-
-        if tactic_type:
+        if after.is_checkmate():
             return {
-                "confidence": 0.8,
-                "details": {"tactic_type": tactic_type},
-                "explanation": f"Missed {tactic_type}"
+                "confidence": 0.95,
+                "details": {"tactic_type": "mate", "mating_move": board.san(best_move)},
+                "explanation": f"{board.san(best_move)} was mate"
             }
 
-        return {
-            "confidence": 0.6,
-            "details": {"tactic_type": "unknown"},
-            "explanation": "Missed stronger continuation"
-        }
+        mover = board.piece_at(best_move.from_square)
+        if mover is None:
+            return None
+
+        # Hand the move back so the threats the move created can be evaluated.
+        # Without this the side to move is the opponent and SEE would answer the
+        # opposite question.
+        threats = after.copy(stack=False)
+        threats.push(chess.Move.null())
+
+        won = []
+        for square in threats.attacks(best_move.to_square):
+            victim = threats.piece_at(square)
+            if victim is None or victim.color == mover.color:
+                continue
+            # The king is not a target you win — it is the check, reported
+            # separately. Handing the move back leaves a checked king capturable
+            # in move generation, so every check looked like a fork of e8.
+            if victim.piece_type == chess.KING:
+                continue
+            capture = chess.Move(best_move.to_square, square)
+            if capture not in threats.legal_moves:
+                continue
+            if see_capture(threats, capture) > 0:
+                won.append(chess.square_name(square))
+
+        gives_check = after.is_check()
+
+        # Two pieces at once, or one piece plus a check: the opponent cannot
+        # save both. One threatened piece and no check is just a threat — the
+        # opponent moves next and usually rescues it — so it is not named.
+        if len(won) >= 2 or (gives_check and won):
+            tactic_type = "fork_with_check" if gives_check else "fork"
+            return {
+                "confidence": 0.85,
+                "details": {
+                    "tactic_type": tactic_type,
+                    "tactic_move": board.san(best_move),
+                    "forked_squares": sorted(won),
+                },
+                "explanation": f"{board.san(best_move)} was a {tactic_type.replace('_', ' ')} "
+                               f"hitting {', '.join(sorted(won))}"
+            }
+
+        if board.is_capture(best_move):
+            gain = see_capture(board, best_move)
+            if gain >= MIN_MISSED_MATERIAL:
+                return {
+                    "confidence": 0.9,
+                    "details": {
+                        "tactic_type": "free_material",
+                        "tactic_move": board.san(best_move),
+                        "material_won": gain,
+                    },
+                    "explanation": f"{board.san(best_move)} wins {gain} pawns of material "
+                                   f"outright and was not played"
+                }
+
+        return None
 
     @staticmethod
     def _piece_value(piece_type: chess.PieceType) -> int:

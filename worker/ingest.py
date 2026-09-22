@@ -532,8 +532,14 @@ class ChessComIngester:
                         move_uci=move_uci,
                         eval_before=eval_before,
                         eval_after=eval_after,
-                        best_move_uci=analysis_result.get('best_move'),
-                        best_move_eval=analysis_result.get('eval'),
+                        # The alternative the user had, not the opponent's reply.
+                        # analysis_result is the position *after* the played move,
+                        # so its best_move belongs to the other side and its eval
+                        # is eval_after — which made the classifier's
+                        # "a better move existed" test compare eval_after to
+                        # itself and never fire.
+                        best_move_uci=best_move_uci_before,
+                        best_move_eval=eval_before,
                         phase=phase,
                         clock_seconds=None  # Clock data not available from PGN
                     )
