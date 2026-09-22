@@ -27,10 +27,17 @@ add to it, or go beyond it — see `AGENT.md`. Tick things off in PRs.
       150cp+ loss becomes `hanging_piece`). They keep the old labels until
       re-derived with `classify_move_blunder` over `position_fen_before`, which
       needs a write-role run.
-- [ ] **`ingest.py` passes the opponent's best reply to the classifier.** It
-      sends `analysis_result['best_move']` (the best move *after* the played
-      move) as `best_move_uci`, so `best_move` in `blunder_details` is the
-      wrong side's move and the `missed_tactic` branch can never fire.
+- [x] **`ingest.py` passes the opponent's best reply to the classifier.** It
+      sent `analysis_result['best_move']` (the best move *after* the played
+      move) as `best_move_uci`, so `best_move` in `blunder_details` was the
+      wrong side's move and the `missed_tactic` branch could never fire. Fixed,
+      along with two more reasons that branch was dead: the eval comparison was
+      unflipped for Black, and `if best_move_eval` treated an eval of exactly 0
+      as "no eval". `missed_tactic` now names a mate, a fork verified by SEE, or
+      free material, and returns nothing when it cannot name one — the old
+      `"unknown"` fallback would have made it the next `hanging_piece`.
+      Stored rows still carry the old labels; re-deriving them needs a
+      write-role `reanalyze.py` run (see the entry above).
 - [ ] **No failure alarm on the nightly ingest.** The 2026-08-25 run died
       silently and nobody knew until games stopped appearing. `daily_ingest.sh`
       should check for its own DONE marker and shout if it is missing.

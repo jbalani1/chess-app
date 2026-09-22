@@ -26,6 +26,19 @@ def classify(fen, uci):
     )
 
 
+def classify_with_best(fen, uci, best_uci, eval_before, eval_after):
+    """Evals are White-centric, the same convention ingest.py passes."""
+    return classify_move_blunder(
+        position_fen=fen,
+        move_uci=uci,
+        eval_before=eval_before,
+        eval_after=eval_after,
+        best_move_uci=best_uci,
+        best_move_eval=eval_before,
+        phase='middlegame',
+    )
+
+
 class TestHangingPiece(unittest.TestCase):
 
     def test_defended_piece_that_still_loses_to_a_pawn_is_hanging(self):
@@ -62,6 +75,68 @@ class TestOverlookedCheck(unittest.TestCase):
     def test_delivering_mate_is_not_overlooked_check(self):
         result = classify('6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1', 'e1e8')
         self.assertNotEqual(result['category'], 'overlooked_check')
+
+
+class TestMissedTactic(unittest.TestCase):
+    """The category could not fire at all until ingest.py stopped handing the
+    classifier the opponent's reply. These pin down what it should mean now."""
+
+    # h6 instead of Nc2+, which forks Ke1 and Ra1.
+    BLACK_FORK = ('6k1/7p/8/8/1n6/8/8/R3K3 b - - 0 1', 'h7h6', 'b4c2')
+    # The same shape with the colours swapped: h3 instead of Nc7+.
+    WHITE_FORK = ('r3k3/8/8/1N6/8/8/7P/6K1 w - - 0 1', 'h2h3', 'b5c7')
+
+    def test_black_missing_a_fork_is_a_missed_tactic(self):
+        # Evals are White-centric, so a Black error moves them up, not down.
+        # Comparing them unflipped made this test the one case that could never
+        # fire — and Black is the side most of the analysed games were played as.
+        fen, played, best = self.BLACK_FORK
+        result = classify_with_best(fen, played, best, eval_before=0, eval_after=300)
+        self.assertEqual(result['category'], 'missed_tactic')
+        self.assertEqual(result['details']['tactic_type'], 'fork_with_check')
+        self.assertEqual(result['details']['forked_squares'], ['a1'])
+
+    def test_white_missing_a_fork_is_a_missed_tactic(self):
+        fen, played, best = self.WHITE_FORK
+        result = classify_with_best(fen, played, best, eval_before=0, eval_after=-300)
+        self.assertEqual(result['category'], 'missed_tactic')
+        self.assertEqual(result['details']['tactic_type'], 'fork_with_check')
+
+    def test_leaving_a_free_piece_on_the_board_is_a_missed_tactic(self):
+        # Bxa4 wins an undefended knight; h6 ignores it.
+        result = classify_with_best(
+            '6k1/7p/2b5/8/N7/8/8/4K3 b - - 0 1', 'h7h6', 'c6a4',
+            eval_before=0, eval_after=300,
+        )
+        self.assertEqual(result['category'], 'missed_tactic')
+        self.assertEqual(result['details']['tactic_type'], 'free_material')
+        self.assertEqual(result['details']['material_won'], 3)
+
+    def test_a_best_move_that_is_only_a_check_is_not_a_missed_tactic(self):
+        # Re8+ is the engine's move but wins nothing, so there is no tactic to
+        # name. The old code called every check a "check_tactic".
+        result = classify_with_best(
+            '3r2k1/7p/8/8/8/8/8/4K3 b - - 0 1', 'h7h6', 'd8e8',
+            eval_before=0, eval_after=300,
+        )
+        self.assertNotEqual(result['category'], 'missed_tactic')
+
+    def test_an_unnameable_tactic_does_not_become_a_missed_tactic(self):
+        # The old fallback was {"tactic_type": "unknown"}, which made the
+        # category mean "a better move existed" — true of nearly every error.
+        result = classify_with_best(
+            '3r2k1/7p/8/8/8/8/8/4K3 b - - 0 1', 'h7h6', None,
+            eval_before=0, eval_after=300,
+        )
+        self.assertNotEqual(result['category'], 'missed_tactic')
+        self.assertNotIn('unknown', str(result['details'].values()))
+
+    def test_a_dead_level_position_still_gets_compared(self):
+        # `if best_move_eval and ...` treated an eval of exactly 0 as "no eval",
+        # so a position assessed at dead level skipped the check entirely.
+        fen, played, best = self.WHITE_FORK
+        result = classify_with_best(fen, played, best, eval_before=0, eval_after=-300)
+        self.assertEqual(result['category'], 'missed_tactic')
 
 
 if __name__ == '__main__':
