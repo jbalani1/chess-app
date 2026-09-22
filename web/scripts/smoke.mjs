@@ -14,9 +14,48 @@ import { setTimeout as sleep } from 'node:timers/promises'
 const ROUTES = [
   '/', '/mistakes', '/explorer', '/insights', '/openings',
   '/performance', '/tactics', '/drill', '/positions',
+  '/mistakes/all', '/mistakes/opening', '/mistakes/piece', '/mistakes/recurring',
   '/explorer?color=black&vs_first_move=d4&view=list',
   '/explorer?edge=winning&view=recurring',
 ]
+
+// The dynamic routes need a real id, so they are discovered at run time rather
+// than hard-coded. They were the blind spot: nine static pages were covered and
+// none of the [eco]/[id]/[slug] ones, which is how /api/openings/[eco] kept an
+// unpaginated .in('game_id', …) long after the same bug was fixed elsewhere.
+// `pick` sorts by `by` so the busiest opening — the one most likely to hit a row
+// cap — is the one tested.
+async function discoverRoutes(base) {
+  const routes = []
+  const json = async (path) => {
+    const r = await fetch(base + path)
+    if (!r.ok) throw new Error(`${path} returned ${r.status}`)
+    return r.json()
+  }
+  const pick = (rows, by) =>
+    Array.isArray(rows) && rows.length
+      ? [...rows].sort((a, b) => (b[by] ?? 0) - (a[by] ?? 0))[0]
+      : null
+
+  try {
+    const opening = pick(await json('/api/openings'), 'games_played')
+    if (opening?.eco) {
+      routes.push(`/openings/${opening.eco}`, `/mistakes/opening/${opening.eco}`)
+    }
+  } catch (e) {
+    console.log(`     (could not discover an opening: ${e.message})`)
+  }
+
+  try {
+    const games = await json('/api/games')
+    const game = (Array.isArray(games) ? games : games?.games)?.[0]
+    if (game?.id) routes.push(`/games/${game.id}`)
+  } catch (e) {
+    console.log(`     (could not discover a game: ${e.message})`)
+  }
+
+  return routes
+}
 
 const PORT = process.env.SMOKE_PORT ?? '3411'
 const reuse = !!process.env.BASE_URL
@@ -46,11 +85,13 @@ if (!reuse) {
   await sleep(1500)
 }
 
+const routes = [...ROUTES, ...(await discoverRoutes(base))]
+
 const browser = await chromium.launch()
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
 let failures = 0
 
-for (const route of ROUTES) {
+for (const route of routes) {
   const page = await ctx.newPage()
   const problems = []
   page.on('pageerror', (e) => problems.push(`pageerror: ${String(e).slice(0, 100)}`))
@@ -80,5 +121,5 @@ for (const route of ROUTES) {
 await browser.close()
 if (server) server.kill('SIGKILL')
 
-console.log(failures ? `\n${failures} route(s) failing` : `\nall ${ROUTES.length} routes clean`)
+console.log(failures ? `\n${failures} route(s) failing` : `\nall ${routes.length} routes clean`)
 process.exit(failures ? 1 : 0)

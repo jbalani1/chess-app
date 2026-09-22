@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { fetchInGameIdChunks, RangeableQuery } from '@/lib/queryChunks'
+
+type MoveRow = {
+  id: string
+  game_id: string
+  ply: number
+  classification: string | null
+  [key: string]: unknown
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,25 +61,29 @@ export async function GET(
 
     const gameIds = games.map(g => g.id)
 
-    // Get mistakes/blunders for these games
-    let movesQuery = supabase
-      .from('moves')
-      .select('*')
-      .in('game_id', gameIds)
-      .order('ply', { ascending: true })
+    // Get mistakes/blunders for these games.
+    //
+    // A single .in('game_id', gameIds) with no pagination stopped at
+    // PostgREST's 1000-row cap without saying so: C50 has 118 games and this
+    // route reported exactly 1000 mistakes, so every per-game mistake_count
+    // and blunder_count below was quietly short. fetchInGameIdChunks pages
+    // through each batch, and keeps the URL short while it is at it.
+    const moves = await fetchInGameIdChunks<MoveRow>(gameIds, (chunk) => {
+      let q = supabase
+        .from('moves')
+        .select('*')
+        .in('game_id', chunk)
+        .order('ply', { ascending: true })
 
-    if (classificationType) {
-      movesQuery = movesQuery.eq('classification', classificationType)
-    } else {
-      // Get all non-good moves by default
-      movesQuery = movesQuery.in('classification', ['inaccuracy', 'mistake', 'blunder'])
-    }
+      if (classificationType) {
+        q = q.eq('classification', classificationType)
+      } else {
+        // Get all non-good moves by default
+        q = q.in('classification', ['inaccuracy', 'mistake', 'blunder'])
+      }
 
-    const { data: moves, error: movesError } = await movesQuery
-
-    if (movesError) {
-      throw movesError
-    }
+      return q as unknown as RangeableQuery<MoveRow>
+    })
 
     // Group moves by game for easier consumption
     const movesByGame: Record<string, typeof moves> = {}
