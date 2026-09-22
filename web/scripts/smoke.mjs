@@ -23,15 +23,40 @@ const reuse = !!process.env.BASE_URL
 const base = process.env.BASE_URL ?? `http://localhost:${PORT}`
 
 let server
+// Kill the whole process group. `server.kill()` only reaches the npm wrapper;
+// `next dev` and its next-server child survived it, kept the port, and the
+// following production build rewrote .next underneath them.
+const stopServer = () => {
+  if (!server) return
+  try {
+    process.kill(-server.pid, 'SIGKILL')
+  } catch {
+    // already exited
+  }
+  server = undefined
+}
+
 if (!reuse) {
   server = spawn('npm', ['run', 'dev', '--', '--port', PORT], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env },
+    detached: true,
   })
+  // 'exit' covers a normal finish and an uncaught throw. It does not fire when
+  // this script is interrupted, which is how the last orphan came about: its
+  // parent died and left a next-server on PPID 1 spinning for twelve hours.
+  process.on('exit', stopServer)
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+    process.on(signal, () => {
+      stopServer()
+      process.exit(1)
+    })
+  }
   const ready = await Promise.race([
     new Promise((res) => {
       const onData = (d) => {
         if (/Ready in|started server/i.test(String(d))) res(true)
+        if (/EADDRINUSE|already in use|is in use/i.test(String(d))) res(false)
       }
       server.stdout.on('data', onData)
       server.stderr.on('data', onData)
@@ -39,8 +64,8 @@ if (!reuse) {
     sleep(90_000).then(() => false),
   ])
   if (!ready) {
-    server.kill('SIGKILL')
-    console.error('smoke: dev server never became ready')
+    stopServer()
+    console.error(`smoke: dev server never became ready on port ${PORT}`)
     process.exit(1)
   }
   await sleep(1500)
@@ -78,7 +103,7 @@ for (const route of ROUTES) {
 }
 
 await browser.close()
-if (server) server.kill('SIGKILL')
+stopServer()
 
 console.log(failures ? `\n${failures} route(s) failing` : `\nall ${ROUTES.length} routes clean`)
 process.exit(failures ? 1 : 0)

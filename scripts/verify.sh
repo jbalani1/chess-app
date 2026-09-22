@@ -54,9 +54,17 @@ step "Page smoke test"
 # Runs before the production build on purpose: both `next dev` and `next build`
 # write to .next, and building underneath a running dev server corrupts it.
 # Clear the port first so a stray server from an interactive session cannot
-# make the gate fail for the wrong reason.
-lsof -ti:3411 2>/dev/null | xargs kill -9 2>/dev/null || true
-if (cd "$WEB" && node scripts/smoke.mjs); then
+# make the gate fail for the wrong reason. lsof lives in /usr/sbin on macOS,
+# which is not on PATH for cron/agent shells — without the fallback this line
+# silently did nothing and a 9-hour-old orphan made every route time out.
+LSOF="$(command -v lsof || echo /usr/sbin/lsof)"
+pkill -9 -f "next dev --port 3411" || true
+STALE="$("$LSOF" -ti:3411 || true)"
+[ -n "$STALE" ] && kill -9 $STALE
+sleep 1
+if [ -n "$("$LSOF" -ti:3411 || true)" ]; then
+  bad "port 3411 is still in use; refusing to smoke-test a stale server"
+elif (cd "$WEB" && node scripts/smoke.mjs); then
   ok "all pages render cleanly"
 else
   bad "one or more pages failed to render"
