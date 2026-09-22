@@ -16,11 +16,21 @@ add to it, or go beyond it — see `AGENT.md`. Tick things off in PRs.
       (around line 500), even from a position that was already mate-lost.
       Less urgent — the nightly ingest appears to use `ingest_recent.py`, but
       `reanalyze.py` still goes through this path.
-- [ ] **`blunder_classifier._check_hanging_piece` is over-broad.** It flags any
+- [x] **`blunder_classifier._check_hanging_piece` is over-broad.** It flags any
       attacked, undefended piece after a move regardless of whether the move
       caused it, which is why `hanging_piece` accounts for ~75% of categorised
       blunders and tells you little. `see.avoidable_drop()` already computes the
       honest version; the classifier could use it.
+- [ ] **Stored `blunder_category` values predate the classifier fix.** Existing
+      rows came from the old ingest classifier and/or
+      `backfill_blunder_categories.py` (which guesses from eval alone — any
+      150cp+ loss becomes `hanging_piece`). They keep the old labels until
+      re-derived with `classify_move_blunder` over `position_fen_before`, which
+      needs a write-role run.
+- [ ] **`ingest.py` passes the opponent's best reply to the classifier.** It
+      sends `analysis_result['best_move']` (the best move *after* the played
+      move) as `best_move_uci`, so `best_move` in `blunder_details` is the
+      wrong side's move and the `missed_tactic` branch can never fire.
 - [ ] **No failure alarm on the nightly ingest.** The 2026-08-25 run died
       silently and nobody knew until games stopped appearing. `daily_ingest.sh`
       should check for its own DONE marker and shout if it is missing.
