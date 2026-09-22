@@ -5,12 +5,17 @@ add to it, or go beyond it — see `AGENT.md`. Tick things off in PRs.
 
 ## Known defects
 
-- [ ] **`ingest.py` mislabels mate-score moves as blunders.** In some
-      checkmate branches it forces `classification = 'blunder'` even when the
-      evaluation improved — 13 such moves in the last 50 Black games, 12 of them
-      the engine's own top choice. Everything downstream now filters with
-      `eval_delta < 0` to compensate; fixing it at the source would let that
-      filter go away. `worker/ingest.py`, the branches around line 480.
+- [x] **Mate-score moves mislabelled as blunders.** 13 such moves in the last
+      50 Black games, 12 of them the engine's own top choice. The cause was
+      `ingest_recent.classify_move` grading on `abs(eval_delta)`, not
+      `ingest.py` (whose best-move override would have caught those 12).
+      Fixed in the ingester; `db/fix_positive_delta_classification.sql`
+      repairs existing rows. Once it has run, the downstream `eval_delta < 0`
+      filters can go.
+- [ ] **`ingest.py` still forces `'blunder'` on any move ending past ±5000cp**
+      (around line 500), even from a position that was already mate-lost.
+      Less urgent — the nightly ingest appears to use `ingest_recent.py`, but
+      `reanalyze.py` still goes through this path.
 - [ ] **`blunder_classifier._check_hanging_piece` is over-broad.** It flags any
       attacked, undefended piece after a move regardless of whether the move
       caused it, which is why `hanging_piece` accounts for ~75% of categorised

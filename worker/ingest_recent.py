@@ -104,19 +104,22 @@ def get_phase(ply):
 
 
 def classify_move(eval_delta_cp):
-    abs_delta = abs(eval_delta_cp)
-    if abs_delta < 50:
+    # eval_delta is from the mover's side, so only a negative delta is a loss.
+    # Taking abs() here once meant a move that *improved* the eval — typically
+    # the engine's own best move jumping to a mate score — was filed as a blunder.
+    loss = -eval_delta_cp
+    if loss < 50:
         return 'good'
-    elif abs_delta < 150:
+    elif loss < 150:
         return 'inaccuracy'
-    elif abs_delta < 300:
+    elif loss < 300:
         return 'mistake'
     return 'blunder'
 
 
 def classify_blunder(eval_delta_cp, board_before, move, best_move, eval_before, eval_after):
     """Simple blunder classification."""
-    abs_delta = abs(eval_delta_cp)
+    abs_delta = max(0, -eval_delta_cp)
     if abs_delta < 150:
         return None, None
 
