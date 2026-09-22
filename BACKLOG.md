@@ -34,9 +34,20 @@ add to it, or go beyond it — see `AGENT.md`. Tick things off in PRs.
 - [ ] **No failure alarm on the nightly ingest.** The 2026-08-25 run died
       silently and nobody knew until games stopped appearing. `daily_ingest.sh`
       should check for its own DONE marker and shout if it is missing.
-- [ ] **Other routes may still have the unchunked `.in('game_id', …)` bug.**
-      `/api/openings` and `/api/positions` were fixed; audit the rest against
-      `lib/queryChunks.ts`.
+- [x] **Other routes may still have the unchunked `.in('game_id', …)` bug.**
+      Audited all 12. One left: `/api/openings/[eco]`, which fed
+      `/mistakes/opening/[eco]`. It was not 500ing, it was stopping at
+      PostgREST's 1000-row cap in silence — C50 reported 1000 mistakes when it
+      has 1847, and the per-game blunder counts summed to 175 instead of 544.
+      Fixed with `fetchInGameIdChunks`.
+- [ ] **Two routes fetch moves with no pagination and are not proven safe.**
+      `/api/insights/trends` and `/api/drill/stats` select from `moves` with no
+      `.limit()` or `.range()`, so they take PostgREST's 1000-row default.
+      Neither currently shows a count sitting on 1000 (drill/stats sums to 595),
+      so they may simply be under the cap today and break as games accumulate.
+      `/api/weakness-profile` uses `.limit(10000)` and returns 882 — that limit
+      appears to lift the default, which is why it is not on this list, but
+      nobody has checked what happens past 10000.
 
 ## Improvements worth considering
 
