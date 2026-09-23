@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { fetchAllRows } from '@/lib/queryChunks'
+import { timeControlCategory } from '@/lib/timeControl'
 
 // --- Type definitions ---
+// Exported so TimePerformanceView renders exactly what this route returns.
 
-interface MoveSegmentStats {
+export interface MoveSegmentStats {
   segment: string
   total_moves: number
   good_moves: number
@@ -16,7 +18,7 @@ interface MoveSegmentStats {
   mistake_rate: number
 }
 
-interface TimeControlPerformance {
+export interface TimeControlPerformance {
   time_control_category: string
   games_played: number
   wins: number
@@ -28,7 +30,7 @@ interface TimeControlPerformance {
   segments: MoveSegmentStats[]
 }
 
-interface TimePerformanceResponse {
+export interface TimePerformanceResponse {
   performances: TimeControlPerformance[]
   insights: string[]
 }
@@ -42,21 +44,6 @@ const SEGMENTS = [
   { label: '31-40', min: 31, max: 40 },
   { label: '41+', min: 41, max: Infinity },
 ] as const
-
-function parseTimeControlCategory(timeControl: string | null): string | null {
-  if (!timeControl) return null
-
-  // Chess.com format: "180+2", "600", "60+1", etc.
-  const match = timeControl.match(/^(\d+)/)
-  if (!match) return null
-
-  const baseSeconds = parseInt(match[1], 10)
-  if (isNaN(baseSeconds)) return null
-
-  if (baseSeconds < 180) return 'bullet'
-  if (baseSeconds < 600) return 'blitz'
-  return 'rapid'
-}
 
 function getMoveNumber(ply: number): number {
   return Math.ceil(ply / 2)
@@ -191,8 +178,10 @@ export async function GET(request: NextRequest) {
 
       if (colorFilter !== 'all' && userColor !== colorFilter) continue
 
-      const category = parseTimeControlCategory(game.time_control)
-      if (!category) continue
+      // Daily games have no clock pressure, so move-number segments mean
+      // nothing for them; they are left out.
+      const category = timeControlCategory(game.time_control)
+      if (!category || category === 'daily') continue
 
       // Initialize category if needed
       if (!categories.has(category)) {

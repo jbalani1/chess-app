@@ -19,7 +19,7 @@ const timeControlOptions = [
   { value: 'bullet', label: 'Bullet' },
   { value: 'blitz', label: 'Blitz' },
   { value: 'rapid', label: 'Rapid' },
-  { value: 'classical', label: 'Classical' },
+  { value: 'daily', label: 'Daily' },
 ]
 
 const dateRangeOptions = [

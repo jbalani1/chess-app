@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { fetchAllRows } from '@/lib/queryChunks'
+import { timeControlCategory } from '@/lib/timeControl'
 import { JoinedGameData } from '@/lib/types'
 
 // Helper to calculate date from range
@@ -15,22 +16,6 @@ function getDateFromRange(range: string): Date | null {
       return new Date(now.setDate(now.getDate() - 90))
     case '1y':
       return new Date(now.setFullYear(now.getFullYear() - 1))
-    default:
-      return null
-  }
-}
-
-// Helper to map time control filter to actual time control patterns
-function getTimeControlPattern(timeControl: string): string[] | null {
-  switch (timeControl) {
-    case 'bullet':
-      return ['60', '60+0', '60+1', '120', '120+0', '120+1', '1+0', '1+1', '2+0', '2+1']
-    case 'blitz':
-      return ['180', '180+0', '180+2', '300', '300+0', '300+2', '300+3', '3+0', '3+2', '5+0', '5+3']
-    case 'rapid':
-      return ['600', '600+0', '600+5', '900', '900+0', '900+10', '10+0', '10+5', '15+0', '15+10']
-    case 'classical':
-      return ['1800', '1800+0', '1800+30', '30+0', '30+20', '45+45', '60+30', '90+30']
     default:
       return null
   }
@@ -94,8 +79,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch blunder categories' }, { status: 500 })
     }
 
-    // Get time control patterns for filtering
-    const timeControlPatterns = timeControl ? getTimeControlPattern(timeControl) : null
+    // 'bullet' | 'blitz' | 'rapid' | 'daily'; anything else matches no game.
+    const timeControlFilter = timeControl || null
 
     // Aggregate the data - only count USER's blunders (not opponent's)
     const categoryStats: Record<string, {
@@ -118,14 +103,7 @@ export async function GET(request: NextRequest) {
       const whitePlayer = game.white_player?.toLowerCase()
       const blackPlayer = game.black_player?.toLowerCase()
 
-      // Filter by time control if specified
-      if (timeControlPatterns) {
-        const gameTimeControl = game.time_control || ''
-        const matchesTimeControl = timeControlPatterns.some(pattern =>
-          gameTimeControl.includes(pattern) || gameTimeControl.toLowerCase().includes(timeControl!)
-        )
-        if (!matchesTimeControl) continue
-      }
+      if (timeControlFilter && timeControlCategory(game.time_control) !== timeControlFilter) continue
 
       const userIsWhite = username === whitePlayer
       const userIsBlack = username === blackPlayer

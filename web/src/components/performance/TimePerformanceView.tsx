@@ -2,37 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useGlobalFilters } from '@/contexts/FilterContext'
-
-// --- Types matching expected API response ---
-
-interface SegmentData {
-  move_range: string
-  total_moves: number
-  accuracy: number
-  mistake_rate: number
-  good_count: number
-  inaccuracy_count: number
-  mistake_count: number
-  blunder_count: number
-}
-
-interface TimeControlData {
-  time_control: string
-  win_rate: number
-  overall_accuracy: number
-  total_games: number
-  segments: SegmentData[]
-}
-
-interface InsightData {
-  text: string
-  type: 'positive' | 'negative' | 'neutral'
-}
-
-interface TimePerformanceData {
-  time_controls: TimeControlData[]
-  insights: InsightData[]
-}
+import type { TimePerformanceResponse } from '@/app/api/time-performance/route'
 
 // --- Helpers ---
 
@@ -60,23 +30,14 @@ function accuracyTextClass(accuracy: number): string {
   return 'text-red-400'
 }
 
-function insightStyle(type: InsightData['type']): { border: string; bg: string; text: string; icon: string } {
-  switch (type) {
-    case 'positive':
-      return { border: 'border-green-500/30', bg: 'bg-green-500/10', text: 'text-green-400', icon: '\u2191' }
-    case 'negative':
-      return { border: 'border-red-500/30', bg: 'bg-red-500/10', text: 'text-red-400', icon: '\u2193' }
-    default:
-      return { border: 'border-blue-500/30', bg: 'bg-blue-500/10', text: 'text-blue-400', icon: '\u2192' }
-  }
-}
+const INSIGHT_STYLE = { border: 'border-blue-500/30', bg: 'bg-blue-500/10', text: 'text-blue-400', icon: '\u2192' }
 
 // --- Component ---
 
 export default function TimePerformanceView() {
   const { color: globalColor } = useGlobalFilters()
 
-  const [data, setData] = useState<TimePerformanceData | null>(null)
+  const [data, setData] = useState<TimePerformanceResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -95,12 +56,13 @@ export default function TimePerformanceView() {
         })
         const response = await fetch(`/api/time-performance?${params}`)
         if (!response.ok) throw new Error('Failed to fetch time performance data')
-        const result: TimePerformanceData = await response.json()
+        const result: TimePerformanceResponse = await response.json()
         setData(result)
 
-        // Auto-select first time control if none selected
-        if (result.time_controls.length > 0 && !selectedTC) {
-          setSelectedTC(result.time_controls[0].time_control)
+        // Auto-select the most-played time control if none selected
+        if (result.performances.length > 0 && !selectedTC) {
+          const mostPlayed = result.performances.reduce((a, b) => (b.games_played > a.games_played ? b : a))
+          setSelectedTC(mostPlayed.time_control_category)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
@@ -111,7 +73,7 @@ export default function TimePerformanceView() {
     fetchData()
   }, [dateFilter, globalColor])
 
-  const selectedData = data?.time_controls.find((tc) => tc.time_control === selectedTC) || null
+  const selectedData = data?.performances.find((tc) => tc.time_control_category === selectedTC) || null
 
   // Loading state
   if (loading) {
@@ -128,7 +90,7 @@ export default function TimePerformanceView() {
   }
 
   // Empty state
-  if (!data || data.time_controls.length === 0) {
+  if (!data || data.performances.length === 0) {
     return (
       <div className="card p-8 text-center">
         <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">No time performance data</h3>
@@ -160,8 +122,8 @@ export default function TimePerformanceView() {
             </select>
           </div>
           <div className="ml-auto text-sm text-[var(--text-muted)]">
-            {data.time_controls.reduce((sum, tc) => sum + tc.total_games, 0)} games across{' '}
-            {data.time_controls.length} time control{data.time_controls.length !== 1 ? 's' : ''}
+            {data.performances.reduce((sum, tc) => sum + tc.games_played, 0)} games across{' '}
+            {data.performances.length} time control{data.performances.length !== 1 ? 's' : ''}
           </div>
         </div>
       </div>
@@ -170,14 +132,14 @@ export default function TimePerformanceView() {
       <div>
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Time Controls</h2>
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {data.time_controls.map((tc) => {
-            const isSelected = selectedTC === tc.time_control
-            const label = TC_LABELS[tc.time_control] || tc.time_control
-            const icon = TC_ICONS[tc.time_control] || '\u23F0'
+          {data.performances.map((tc) => {
+            const isSelected = selectedTC === tc.time_control_category
+            const label = TC_LABELS[tc.time_control_category] || tc.time_control_category
+            const icon = TC_ICONS[tc.time_control_category] || '\u23F0'
             return (
               <button
-                key={tc.time_control}
-                onClick={() => setSelectedTC(isSelected ? null : tc.time_control)}
+                key={tc.time_control_category}
+                onClick={() => setSelectedTC(isSelected ? null : tc.time_control_category)}
                 className={`flex-shrink-0 w-52 p-4 rounded-lg border transition-all text-left ${
                   isSelected
                     ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 ring-2 ring-[var(--accent-primary)]/30'
@@ -201,7 +163,7 @@ export default function TimePerformanceView() {
                   </div>
                 </div>
                 <div className="text-xs text-[var(--text-muted)] mt-2">
-                  {tc.total_games} game{tc.total_games !== 1 ? 's' : ''}
+                  {tc.games_played} game{tc.games_played !== 1 ? 's' : ''}
                 </div>
               </button>
             )
@@ -217,7 +179,7 @@ export default function TimePerformanceView() {
             <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
               Accuracy by Game Phase
               <span className="ml-2 text-sm font-normal text-[var(--text-muted)]">
-                {TC_LABELS[selectedData.time_control] || selectedData.time_control}
+                {TC_LABELS[selectedData.time_control_category] || selectedData.time_control_category}
               </span>
             </h2>
             <p className="text-xs text-[var(--text-muted)] mb-5">
@@ -226,9 +188,9 @@ export default function TimePerformanceView() {
 
             <div className="space-y-3">
               {selectedData.segments.map((seg) => (
-                <div key={seg.move_range} className="flex items-center gap-3">
+                <div key={seg.segment} className="flex items-center gap-3">
                   <div className="w-20 flex-shrink-0 text-right">
-                    <span className="text-sm font-mono text-[var(--text-secondary)]">{seg.move_range}</span>
+                    <span className="text-sm font-mono text-[var(--text-secondary)]">{seg.segment}</span>
                   </div>
                   <div className="flex-1 bg-[var(--bg-tertiary)] rounded-lg overflow-hidden h-7 relative">
                     <div
@@ -272,12 +234,12 @@ export default function TimePerformanceView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
               {selectedData.segments.map((seg) => (
                 <div
-                  key={seg.move_range}
+                  key={seg.segment}
                   className="card p-4 border-t-2"
                   style={{ borderTopColor: accuracyColor(seg.accuracy) }}
                 >
                   <div className="text-sm font-semibold text-[var(--text-primary)] mb-1">
-                    Moves {seg.move_range}
+                    Moves {seg.segment}
                   </div>
                   <div className="text-xs text-[var(--text-muted)] mb-3">{seg.total_moves} total moves</div>
 
@@ -299,19 +261,19 @@ export default function TimePerformanceView() {
                   <div className="border-t border-[var(--divider-color)] pt-2 space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-green-400">Good</span>
-                      <span className="font-mono text-[var(--text-primary)]">{seg.good_count}</span>
+                      <span className="font-mono text-[var(--text-primary)]">{seg.good_moves}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-yellow-400">Inaccuracy</span>
-                      <span className="font-mono text-[var(--text-primary)]">{seg.inaccuracy_count}</span>
+                      <span className="font-mono text-[var(--text-primary)]">{seg.inaccuracies}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-orange-400">Mistake</span>
-                      <span className="font-mono text-[var(--text-primary)]">{seg.mistake_count}</span>
+                      <span className="font-mono text-[var(--text-primary)]">{seg.mistakes}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-red-400">Blunder</span>
-                      <span className="font-mono text-[var(--text-primary)]">{seg.blunder_count}</span>
+                      <span className="font-mono text-[var(--text-primary)]">{seg.blunders}</span>
                     </div>
                   </div>
                 </div>
@@ -330,13 +292,13 @@ export default function TimePerformanceView() {
               <thead>
                 <tr className="border-b border-[var(--border-color)]">
                   <th className="text-left py-2 px-3 text-[var(--text-muted)] font-medium">Segment</th>
-                  {data.time_controls.map((tc) => (
+                  {data.performances.map((tc) => (
                     <th
-                      key={tc.time_control}
+                      key={tc.time_control_category}
                       className="text-center py-2 px-3 text-[var(--text-muted)] font-medium"
                     >
-                      {TC_ICONS[tc.time_control] || ''}{' '}
-                      {TC_LABELS[tc.time_control] || tc.time_control}
+                      {TC_ICONS[tc.time_control_category] || ''}{' '}
+                      {TC_LABELS[tc.time_control_category] || tc.time_control_category}
                     </th>
                   ))}
                 </tr>
@@ -345,8 +307,8 @@ export default function TimePerformanceView() {
                 {/* Overall row */}
                 <tr className="border-b border-[var(--divider-color)] bg-[var(--bg-tertiary)]/50">
                   <td className="py-2 px-3 font-semibold text-[var(--text-primary)]">Overall</td>
-                  {data.time_controls.map((tc) => (
-                    <td key={tc.time_control} className="py-2 px-3 text-center">
+                  {data.performances.map((tc) => (
+                    <td key={tc.time_control_category} className="py-2 px-3 text-center">
                       <span className={`font-bold ${accuracyTextClass(tc.overall_accuracy)}`}>
                         {tc.overall_accuracy.toFixed(1)}%
                       </span>
@@ -354,20 +316,20 @@ export default function TimePerformanceView() {
                   ))}
                 </tr>
                 {/* Segment rows - use first TC's segments as the reference */}
-                {data.time_controls[0].segments.map((refSeg) => (
-                  <tr key={refSeg.move_range} className="border-b border-[var(--divider-color)]">
-                    <td className="py-2 px-3 font-mono text-[var(--text-secondary)]">{refSeg.move_range}</td>
-                    {data.time_controls.map((tc) => {
-                      const seg = tc.segments.find((s) => s.move_range === refSeg.move_range)
+                {data.performances[0].segments.map((refSeg) => (
+                  <tr key={refSeg.segment} className="border-b border-[var(--divider-color)]">
+                    <td className="py-2 px-3 font-mono text-[var(--text-secondary)]">{refSeg.segment}</td>
+                    {data.performances.map((tc) => {
+                      const seg = tc.segments.find((s) => s.segment === refSeg.segment)
                       if (!seg) {
                         return (
-                          <td key={tc.time_control} className="py-2 px-3 text-center text-[var(--text-muted)]">
+                          <td key={tc.time_control_category} className="py-2 px-3 text-center text-[var(--text-muted)]">
                             --
                           </td>
                         )
                       }
                       return (
-                        <td key={tc.time_control} className="py-2 px-3 text-center">
+                        <td key={tc.time_control_category} className="py-2 px-3 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <div
                               className="w-2 h-2 rounded-full flex-shrink-0"
@@ -386,10 +348,10 @@ export default function TimePerformanceView() {
                 {/* Win rate row */}
                 <tr className="bg-[var(--bg-tertiary)]/50">
                   <td className="py-2 px-3 font-semibold text-[var(--text-primary)]">Win Rate</td>
-                  {data.time_controls.map((tc) => (
-                    <td key={tc.time_control} className="py-2 px-3 text-center">
+                  {data.performances.map((tc) => (
+                    <td key={tc.time_control_category} className="py-2 px-3 text-center">
                       <span className="font-bold text-[var(--text-primary)]">{tc.win_rate.toFixed(1)}%</span>
-                      <div className="text-xs text-[var(--text-muted)]">{tc.total_games} games</div>
+                      <div className="text-xs text-[var(--text-muted)]">{tc.games_played} games</div>
                     </td>
                   ))}
                 </tr>
@@ -405,7 +367,7 @@ export default function TimePerformanceView() {
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Insights</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {data.insights.map((insight, i) => {
-              const style = insightStyle(insight.type)
+              const style = INSIGHT_STYLE
               return (
                 <div
                   key={i}
@@ -415,7 +377,7 @@ export default function TimePerformanceView() {
                     <span className={`text-lg font-bold ${style.text} flex-shrink-0 mt-0.5`}>
                       {style.icon}
                     </span>
-                    <p className="text-sm text-[var(--text-secondary)]">{insight.text}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">{insight}</p>
                   </div>
                 </div>
               )
