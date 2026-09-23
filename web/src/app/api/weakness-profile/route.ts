@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { fetchAllRows } from '@/lib/queryChunks'
 
 // --- Type definitions ---
 
@@ -117,52 +118,57 @@ export async function GET(request: NextRequest) {
     const dateCutoff = computeDateCutoff(dateFilter)
 
     // Build query: moves with missed tactics joined to games
-    let query = supabase
-      .from('moves')
-      .select(`
-        id,
-        game_id,
-        ply,
-        move_san,
-        best_move_san,
-        best_move_uci,
-        eval_delta,
-        classification,
-        phase,
-        position_fen,
-        position_fen_before,
-        blunder_details,
-        games!inner (
+    const buildQuery = () => {
+      let query = supabase
+        .from('moves')
+        .select(`
           id,
-          white_player,
-          black_player,
-          result,
-          opening_name,
-          eco,
-          time_control,
-          played_at,
-          username
-        )
-      `)
-      .in('classification', ['inaccuracy', 'mistake', 'blunder'])
-      .not('blunder_details->missed_tactic_type', 'is', null)
+          game_id,
+          ply,
+          move_san,
+          best_move_san,
+          best_move_uci,
+          eval_delta,
+          classification,
+          phase,
+          position_fen,
+          position_fen_before,
+          blunder_details,
+          games!inner (
+            id,
+            white_player,
+            black_player,
+            result,
+            opening_name,
+            eco,
+            time_control,
+            played_at,
+            username
+          )
+        `)
+        .in('classification', ['inaccuracy', 'mistake', 'blunder'])
+        .not('blunder_details->missed_tactic_type', 'is', null)
 
-    if (phaseFilter !== 'all') {
-      query = query.eq('phase', phaseFilter)
+      if (phaseFilter !== 'all') {
+        query = query.eq('phase', phaseFilter)
+      }
+
+      if (dateCutoff) {
+        query = query.gte('games.played_at', dateCutoff.toISOString())
+      }
+
+      return query.order('id')
     }
 
-    if (dateCutoff) {
-      query = query.gte('games.played_at', dateCutoff.toISOString())
-    }
-
-    const { data: moves, error } = await query.limit(10000)
-
-    if (error) {
+    let moves
+    try {
+      moves = await fetchAllRows(buildQuery)
+    } catch (error) {
       console.error('Error fetching weakness profile data:', error)
       return NextResponse.json({ error: 'Failed to fetch weakness profile data' }, { status: 500 })
     }
 
-    if (!moves || moves.length === 0) {
+    if (moves.length === 0) {
       const empty: WeaknessProfile = { motifs: [], opening_motifs: [], study_queue: [] }
       return NextResponse.json(empty)
     }

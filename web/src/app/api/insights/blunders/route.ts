@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { fetchAllRows } from '@/lib/queryChunks'
 import { JoinedGameData } from '@/lib/types'
 
 // Helper to calculate date from range
@@ -47,42 +48,48 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
 
     // Build query with filters
-    let query = supabase
-      .from('moves')
-      .select(`
-        blunder_category,
-        blunder_details,
-        classification,
-        eval_delta,
-        phase,
-        piece_moved,
-        ply,
-        games!inner (
-          username,
-          white_player,
-          black_player,
-          time_control,
-          played_at
-        )
-      `)
-      .not('blunder_category', 'is', null)
+    const buildQuery = () => {
+      let query = supabase
+        .from('moves')
+        .select(`
+          id,
+          blunder_category,
+          blunder_details,
+          classification,
+          eval_delta,
+          phase,
+          piece_moved,
+          ply,
+          games!inner (
+            username,
+            white_player,
+            black_player,
+            time_control,
+            played_at
+          )
+        `)
+        .not('blunder_category', 'is', null)
 
-    // Apply date filter
-    if (dateRange) {
-      const fromDate = getDateFromRange(dateRange)
-      if (fromDate) {
-        query = query.gte('games.played_at', fromDate.toISOString())
+      // Apply date filter
+      if (dateRange) {
+        const fromDate = getDateFromRange(dateRange)
+        if (fromDate) {
+          query = query.gte('games.played_at', fromDate.toISOString())
+        }
+      } else if (startDate) {
+        query = query.gte('games.played_at', startDate)
+        if (endDate) {
+          query = query.lte('games.played_at', endDate)
+        }
       }
-    } else if (startDate) {
-      query = query.gte('games.played_at', startDate)
-      if (endDate) {
-        query = query.lte('games.played_at', endDate)
-      }
+
+      return query.order('id')
     }
 
-    const { data: blunderCategories, error } = await query
-
-    if (error) {
+    let blunderCategories
+    try {
+      blunderCategories = await fetchAllRows(buildQuery, 4)
+    } catch (error) {
       console.error('Error fetching blunder categories:', error)
       return NextResponse.json({ error: 'Failed to fetch blunder categories' }, { status: 500 })
     }
@@ -101,7 +108,7 @@ export async function GET(request: NextRequest) {
       examples: Array<{ explanation: string; eval_loss: number }>
     }> = {}
 
-    for (const move of blunderCategories || []) {
+    for (const move of blunderCategories) {
       const category = move.blunder_category
       if (!category) continue
 

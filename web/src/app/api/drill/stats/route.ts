@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { fetchAllRows } from '@/lib/queryChunks'
 import { DrillStats, CategoryDrillStats, BlunderCategory, JoinedGameData } from '@/lib/types'
 
 export async function GET() {
@@ -8,25 +9,27 @@ export async function GET() {
     const now = new Date().toISOString()
 
     // Get all blunder positions (to know total available)
-    const { data: allBlunders, error: blunderError } = await supabaseAdmin
-      .from('moves')
-      .select(`
-        id,
-        blunder_category,
-        games!inner (username, white_player, black_player),
-        ply
-      `)
-      .in('classification', ['mistake', 'blunder'])
-      .not('blunder_category', 'is', null)
-      .not('best_move_uci', 'is', null)
-
-    if (blunderError) {
+    let allBlunders
+    try {
+      allBlunders = await fetchAllRows(() => supabaseAdmin
+        .from('moves')
+        .select(`
+          id,
+          blunder_category,
+          games!inner (username, white_player, black_player),
+          ply
+        `)
+        .in('classification', ['mistake', 'blunder'])
+        .not('blunder_category', 'is', null)
+        .not('best_move_uci', 'is', null)
+        .order('id'), 4)
+    } catch (blunderError) {
       console.error('Error fetching blunders:', blunderError)
       return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
     }
 
     // Filter to only user's moves
-    const userBlunders = (allBlunders || []).filter(move => {
+    const userBlunders = allBlunders.filter(move => {
       const game = move.games as unknown as JoinedGameData
       const gameUsername = game.username?.toLowerCase()
       const whitePlayer = game.white_player?.toLowerCase()

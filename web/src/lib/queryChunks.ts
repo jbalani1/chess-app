@@ -14,11 +14,41 @@
 
 // Keep the URL comfortably short: ~60 UUIDs ≈ 2.6 KB of query string.
 const GAME_ID_CHUNK = 60
-// PostgREST's default maximum rows returned per request.
+// PostgREST's maximum rows returned per request. This is a server-side cap:
+// `.limit(50000)` does not raise it, the response is simply cut at 1000 rows
+// with no error.
 const PAGE_SIZE = 1000
 
 export interface RangeableQuery<T> {
   range(from: number, to: number): PromiseLike<{ data: T[] | null; error: unknown }>
+}
+
+// Fetches every row of a query, one PAGE_SIZE page at a time, `concurrency`
+// pages per round trip. Use this for any query whose result can pass 1000 rows.
+//
+// The builder MUST apply an `.order()` on a unique column (e.g. `id`). Offset
+// pagination over an unordered result is not stable in Postgres, so pages can
+// overlap or skip rows — and with concurrent pages that is not hypothetical.
+export async function fetchAllRows<T>(
+  buildQuery: () => RangeableQuery<T>,
+  concurrency = 1,
+): Promise<T[]> {
+  const rows: T[] = []
+
+  for (let from = 0; ; from += PAGE_SIZE * concurrency) {
+    const pages = await Promise.all(
+      Array.from({ length: concurrency }, (_, i) => {
+        const start = from + i * PAGE_SIZE
+        return buildQuery().range(start, start + PAGE_SIZE - 1)
+      }),
+    )
+
+    for (const { data, error } of pages) {
+      if (error) throw error
+      rows.push(...(data ?? []))
+      if (!data || data.length < PAGE_SIZE) return rows
+    }
+  }
 }
 
 export async function fetchInGameIdChunks<T>(
@@ -29,17 +59,7 @@ export async function fetchInGameIdChunks<T>(
 
   for (let i = 0; i < gameIds.length; i += GAME_ID_CHUNK) {
     const chunk = gameIds.slice(i, i + GAME_ID_CHUNK)
-
-    let from = 0
-    for (;;) {
-      const { data, error } = await buildQuery(chunk).range(from, from + PAGE_SIZE - 1)
-      if (error) throw error
-      if (!data || data.length === 0) break
-
-      rows.push(...data)
-      if (data.length < PAGE_SIZE) break
-      from += PAGE_SIZE
-    }
+    rows.push(...(await fetchAllRows(() => buildQuery(chunk))))
   }
 
   return rows
