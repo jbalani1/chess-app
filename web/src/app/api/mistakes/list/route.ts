@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { fetchInGameIdChunks, type RangeableQuery } from '@/lib/queryChunks'
+import { fetchAllRows, fetchInGameIdChunks, type RangeableQuery } from '@/lib/queryChunks'
+import { isTimeControlCategory, timeControlCategory } from '@/lib/timeControl'
 
 interface MoveListRow {
   id: string
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     const classification = searchParams.get('classification') // 'mistake', 'blunder', or null for both
     const pieceMoved = searchParams.get('piece_moved') // 'P', 'N', 'B', 'R', 'Q', 'K'
     const phase = searchParams.get('phase') // 'opening', 'middlegame', 'endgame'
-    const timeControl = searchParams.get('time_control') // e.g., '10+5'
+    const timeControl = searchParams.get('time_control') // 'blitz' etc. from the filter bar, or an exact '10+5'
     const dateFrom = searchParams.get('date_from') // YYYY-MM-DD
     const dateTo = searchParams.get('date_to') // YYYY-MM-DD
     const sortBy = searchParams.get('sortBy') || 'date' // 'date', 'eval_delta', 'phase', 'piece'
@@ -35,30 +36,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Username required' }, { status: 400 })
     }
 
+    // A category can't be matched in SQL (see lib/timeControl), so it is
+    // applied to the fetched games below; an exact value still filters in SQL.
+    const timeControlCat = timeControl && isTimeControlCategory(timeControl) ? timeControl : null
+
     // First, get all games for this user with their color info
-    let gamesQuery = supabase
-      .from('games')
-      .select('id, white_player, black_player, username')
-      .eq('username', username)
+    let games
+    try {
+      games = await fetchAllRows(() => {
+        let gamesQuery = supabase
+          .from('games')
+          .select('id, white_player, black_player, username, time_control')
+          .eq('username', username)
 
-    if (dateFrom) {
-      gamesQuery = gamesQuery.gte('played_at', dateFrom)
-    }
-    if (dateTo) {
-      gamesQuery = gamesQuery.lte('played_at', dateTo + 'T23:59:59')
-    }
-    if (timeControl) {
-      gamesQuery = gamesQuery.eq('time_control', timeControl)
-    }
-
-    const { data: games, error: gamesError } = await gamesQuery
-
-    if (gamesError) {
+        if (dateFrom) {
+          gamesQuery = gamesQuery.gte('played_at', dateFrom)
+        }
+        if (dateTo) {
+          gamesQuery = gamesQuery.lte('played_at', dateTo + 'T23:59:59')
+        }
+        if (timeControl && !timeControlCat) {
+          gamesQuery = gamesQuery.eq('time_control', timeControl)
+        }
+        return gamesQuery.order('id')
+      })
+    } catch (gamesError) {
       console.error('Error fetching games:', gamesError)
       return NextResponse.json({ error: 'Failed to fetch games' }, { status: 500 })
     }
 
-    if (!games || games.length === 0) {
+    if (timeControlCat) {
+      games = games.filter(g => timeControlCategory(g.time_control) === timeControlCat)
+    }
+
+    if (games.length === 0) {
       return NextResponse.json({
         data: [],
         total: 0,

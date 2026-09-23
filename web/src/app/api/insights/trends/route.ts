@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { fetchAllRows } from '@/lib/queryChunks'
+import { timeControlCategory } from '@/lib/timeControl'
 
 function getDateFromRange(range: string): Date | null {
   const now = new Date()
@@ -9,16 +10,6 @@ function getDateFromRange(range: string): Date | null {
     case '30d': return new Date(now.setDate(now.getDate() - 30))
     case '90d': return new Date(now.setDate(now.getDate() - 90))
     case '1y': return new Date(now.setFullYear(now.getFullYear() - 1))
-    default: return null
-  }
-}
-
-function getTimeControlPattern(timeControl: string): string[] | null {
-  switch (timeControl) {
-    case 'bullet': return ['60', '60+0', '60+1', '120', '120+0', '120+1', '1+0', '1+1', '2+0', '2+1']
-    case 'blitz': return ['180', '180+0', '180+2', '300', '300+0', '300+2', '300+3', '3+0', '3+2', '5+0', '5+3']
-    case 'rapid': return ['600', '600+0', '600+5', '900', '900+0', '900+10', '10+0', '10+5', '15+0', '15+10']
-    case 'classical': return ['1800', '1800+0', '1800+30', '30+0', '30+20', '45+45', '60+30', '90+30']
     default: return null
   }
 }
@@ -112,7 +103,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch trend data' }, { status: 500 })
     }
 
-    const timeControlPatterns = timeControl ? getTimeControlPattern(timeControl) : null
+    // 'bullet' | 'blitz' | 'rapid' | 'daily'; anything else matches no game.
+    const timeControlFilter = timeControl || null
 
     // Bucket the data
     const bucketMap: Record<string, {
@@ -142,10 +134,7 @@ export async function GET(request: NextRequest) {
       if (!isUserMove) continue
 
       // Filter by time control
-      if (timeControlPatterns) {
-        const gameTC = game.time_control || ''
-        if (!timeControlPatterns.some(p => gameTC.includes(p))) continue
-      }
+      if (timeControlFilter && timeControlCategory(game.time_control) !== timeControlFilter) continue
 
       // A row with no played_at cannot be bucketed; skip it rather than
       // producing an Invalid Date that silently lands in a junk bucket.
