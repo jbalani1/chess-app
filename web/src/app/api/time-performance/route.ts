@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { fetchAllRows } from '@/lib/queryChunks'
 
 // --- Type definitions ---
 
@@ -111,33 +112,33 @@ export async function GET(request: NextRequest) {
 
     const dateCutoff = computeDateCutoff(dateFilter)
 
-    // Fetch all moves joined to games
-    let query = supabase
-      .from('moves')
-      .select(`
-        id,
-        game_id,
-        ply,
-        eval_delta,
-        classification,
-        games!inner (
-          id,
-          white_player,
-          black_player,
-          result,
-          time_control,
-          played_at,
-          username
-        )
-      `)
+    // This needs every move of every game (~60k rows today). Games are fetched
+    // once and looked up by id, rather than embedding the game in each move row,
+    // which multiplied the payload ~60x and made the route take ~11s.
+    let games: GameData[]
+    let moves: { game_id: string; ply: number; eval_delta: number | null; classification: string | null }[]
+    try {
+      games = await fetchAllRows(() => {
+        let query = supabase
+          .from('games')
+          .select('id, white_player, black_player, result, time_control, played_at, username')
+        if (dateCutoff) {
+          query = query.gte('played_at', dateCutoff.toISOString())
+        }
+        return query.order('id')
+      })
 
-    if (dateCutoff) {
-      query = query.gte('games.played_at', dateCutoff.toISOString())
-    }
-
-    const { data: moves, error } = await query.limit(50000)
-
-    if (error) {
+      moves = await fetchAllRows(() => {
+        // The embedded played_at is only there to push the date filter into SQL.
+        let query = supabase
+          .from('moves')
+          .select('id, game_id, ply, eval_delta, classification, games!inner(played_at)')
+        if (dateCutoff) {
+          query = query.gte('games.played_at', dateCutoff.toISOString())
+        }
+        return query.order('id')
+      }, 8)
+    } catch (error) {
       console.error('Error fetching time performance data:', error)
       return NextResponse.json(
         { error: 'Failed to fetch time performance data' },
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!moves || moves.length === 0) {
+    if (moves.length === 0) {
       const empty: TimePerformanceResponse = { performances: [], insights: [] }
       return NextResponse.json(empty)
     }
@@ -166,9 +167,11 @@ export async function GET(request: NextRequest) {
     }
 
     const categories = new Map<string, CategoryAccumulator>()
+    const gamesById = new Map(games.map(g => [g.id, g]))
 
     for (const move of moves) {
-      const game = move.games as unknown as GameData
+      const game = gamesById.get(move.game_id)
+      if (!game) continue
       const username = game.username?.toLowerCase()
       const whitePlayer = game.white_player?.toLowerCase()
       const blackPlayer = game.black_player?.toLowerCase()

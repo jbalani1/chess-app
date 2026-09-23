@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { fetchAllRows } from '@/lib/queryChunks'
 
 function getDateFromRange(range: string): Date | null {
   const now = new Date()
@@ -62,45 +63,51 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    let query = supabaseAdmin
-      .from('moves')
-      .select(`
-        blunder_category,
-        classification,
-        eval_delta,
-        ply,
-        games!inner (
-          username,
-          white_player,
-          black_player,
-          time_control,
-          played_at
-        )
-      `)
-      .in('classification', ['mistake', 'blunder'])
+    const buildQuery = () => {
+      let query = supabaseAdmin
+        .from('moves')
+        .select(`
+          id,
+          blunder_category,
+          classification,
+          eval_delta,
+          ply,
+          games!inner (
+            username,
+            white_player,
+            black_player,
+            time_control,
+            played_at
+          )
+        `)
+        .in('classification', ['mistake', 'blunder'])
 
-    if (category) {
-      query = query.eq('blunder_category', category)
-    } else {
-      query = query.not('blunder_category', 'is', null)
+      if (category) {
+        query = query.eq('blunder_category', category)
+      } else {
+        query = query.not('blunder_category', 'is', null)
+      }
+
+      // Apply date filter
+      if (dateRange) {
+        const fromDate = getDateFromRange(dateRange)
+        if (fromDate) {
+          query = query.gte('games.played_at', fromDate.toISOString())
+        }
+      } else if (startDate) {
+        query = query.gte('games.played_at', startDate)
+        if (endDate) {
+          query = query.lte('games.played_at', endDate)
+        }
+      }
+
+      return query.order('id')
     }
 
-    // Apply date filter
-    if (dateRange) {
-      const fromDate = getDateFromRange(dateRange)
-      if (fromDate) {
-        query = query.gte('games.played_at', fromDate.toISOString())
-      }
-    } else if (startDate) {
-      query = query.gte('games.played_at', startDate)
-      if (endDate) {
-        query = query.lte('games.played_at', endDate)
-      }
-    }
-
-    const { data, error } = await query
-
-    if (error) {
+    let data
+    try {
+      data = await fetchAllRows(buildQuery, 4)
+    } catch (error) {
       console.error('Error fetching trend data:', error)
       return NextResponse.json({ error: 'Failed to fetch trend data' }, { status: 500 })
     }
@@ -117,7 +124,7 @@ export async function GET(request: NextRequest) {
       by_category: Record<string, number>
     }> = {}
 
-    for (const move of data || []) {
+    for (const move of data) {
       // Supabase types an embedded row as either an object or an array
       // depending on how it infers the relationship, so normalise both.
       const embedded = move.games as GameRef | GameRef[] | null
