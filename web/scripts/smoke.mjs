@@ -16,6 +16,8 @@ const ROUTES = [
   '/performance', '/tactics', '/drill', '/positions',
   '/explorer?color=black&vs_first_move=d4&view=list',
   '/explorer?edge=winning&view=recurring',
+  // Tabs render different components; '/performance' alone only covers the first.
+  '/performance?tab=time', '/performance?tab=repertoire',
 ]
 
 const PORT = process.env.SMOKE_PORT ?? '3411'

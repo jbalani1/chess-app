@@ -59,9 +59,10 @@ export default function TimePerformanceView() {
         const result: TimePerformanceResponse = await response.json()
         setData(result)
 
-        // Auto-select first time control if none selected
+        // Auto-select the most-played time control if none selected
         if (result.performances.length > 0 && !selectedTC) {
-          setSelectedTC(result.performances[0].time_control_category)
+          const mostPlayed = result.performances.reduce((a, b) => (b.games_played > a.games_played ? b : a))
+          setSelectedTC(mostPlayed.time_control_category)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
