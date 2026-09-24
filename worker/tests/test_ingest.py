@@ -13,6 +13,7 @@ import chess.pgn
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ingest import ChessComIngester
+from engine import ChessEngine
 
 
 class TestChessComIngester(unittest.TestCase):
@@ -158,19 +159,19 @@ class TestChessComIngester(unittest.TestCase):
         
         # Mock the engine
         mock_engine = Mock()
-        mock_engine.analyze_position.return_value = 50
+        mock_engine.analyze_position_with_best_move.return_value = {'eval': 50, 'best_move': None}
         mock_engine.classify_move.return_value = 'good'
         mock_engine.get_phase.return_value = 'opening'
         mock_engine.get_piece_moved.return_value = 'P'
         self.ingester.engine = mock_engine
-        
+
         moves_data = self.ingester.analyze_game_moves(game, 'testuser')
-        
-        # Should analyze moves for white player (moves 1, 3, 5...)
-        self.assertGreater(len(moves_data), 0)
-        
+
+        # Every ply is stored, both sides
+        self.assertEqual(len(moves_data), 4)
+
         # Check that engine methods were called
-        self.assertTrue(mock_engine.analyze_position.called)
+        self.assertTrue(mock_engine.analyze_position_with_best_move.called)
         self.assertTrue(mock_engine.classify_move.called)
         self.assertTrue(mock_engine.get_phase.called)
         self.assertTrue(mock_engine.get_piece_moved.called)
@@ -192,16 +193,16 @@ class TestChessComIngester(unittest.TestCase):
         
         # Mock the engine
         mock_engine = Mock()
-        mock_engine.analyze_position.return_value = 50
+        mock_engine.analyze_position_with_best_move.return_value = {'eval': 50, 'best_move': None}
         mock_engine.classify_move.return_value = 'good'
         mock_engine.get_phase.return_value = 'opening'
         mock_engine.get_piece_moved.return_value = 'P'
         self.ingester.engine = mock_engine
-        
+
         moves_data = self.ingester.analyze_game_moves(game, 'testuser')
-        
-        # Should analyze moves for black player (moves 2, 4, 6...)
-        self.assertGreater(len(moves_data), 0)
+
+        # Every ply is stored, both sides
+        self.assertEqual(len(moves_data), 4)
     
     def test_piece_identification_from_san(self):
         """Test piece identification from SAN notation"""
@@ -248,6 +249,77 @@ class TestChessComIngester(unittest.TestCase):
             except chess.InvalidMoveError:
                 # Skip invalid moves in the test position
                 continue
+
+
+class TestMoverPerspective(unittest.TestCase):
+    """analyze_game_moves stores every ply, but used to judge each one from the
+    user's side: opponent errors came out 'good', an opponent's mating attack
+    came out 'blunder', and any move from an already mate-lost position was
+    forced to 'blunder'. Each move is now judged from the side that played it,
+    matching ingest_recent.py."""
+
+    # 1. e4 e5 2. Nf3 Nc6 — ply 1 and 3 are White's, 2 and 4 Black's
+    SANS = ['e4', 'e5', 'Nf3', 'Nc6']
+
+    def setUp(self):
+        with patch('ingest.psycopg2.connect'):
+            with patch('ingest.get_engine'):
+                self.ingester = ChessComIngester()
+
+    def run_game(self, evals_after, user_color='white'):
+        """evals_after[i] is the White-centric eval after ply i+1; the start
+        position is +30. The engine's best move is never the played move, so
+        the best-move override cannot mask the classification under test."""
+        board = chess.Board()
+        evals = {board.fen(): 30}
+        for san, ev in zip(self.SANS, evals_after):
+            board.push_san(san)
+            evals[board.fen()] = ev
+
+        def analyze(fen, *args, **kwargs):
+            return {'eval': evals[fen], 'best_move': None}
+
+        engine = Mock()
+        engine.analyze_position_with_best_move.side_effect = analyze
+        engine.classify_move.side_effect = lambda delta: ChessEngine.classify_move(None, delta)
+        engine.get_phase.return_value = 'opening'
+        engine.get_piece_moved.return_value = 'P'
+        self.ingester.engine = engine
+
+        white, black = ('testuser', 'opponent') if user_color == 'white' else ('opponent', 'testuser')
+        pgn = f'[White "{white}"]\n[Black "{black}"]\n\n1. e4 e5 2. Nf3 Nc6 *\n'
+        game = self.ingester.parse_pgn_game(pgn)
+        with patch('ingest.classify_move_blunder') as classify:
+            classify.return_value = {'category': 'x', 'confidence': 0, 'explanation': '', 'details': {}}
+            return self.ingester.analyze_game_moves(game, 'testuser')
+
+    def test_opponent_error_is_graded_from_the_opponents_side(self):
+        # Black's 1...e5 hands White +400: a 370cp loss for Black
+        moves = self.run_game([30, 400, 400, 400])
+        self.assertEqual(moves[1]['eval_delta'], -370)
+        self.assertEqual(moves[1]['classification'], 'blunder')
+
+    def test_opponent_mating_attack_is_not_a_blunder(self):
+        # User (White) allows mate on ply 3; Black keeps the mate on ply 4
+        moves = self.run_game([30, 30, -9990, -9992])
+        self.assertEqual(moves[2]['classification'], 'blunder')
+        self.assertEqual(moves[3]['classification'], 'good')
+
+    def test_move_from_already_mate_lost_position_is_not_forced_to_blunder(self):
+        # White is already being mated after ply 2; ply 3 changes nothing
+        moves = self.run_game([30, -9990, -9992, -9992])
+        self.assertEqual(moves[2]['eval_delta'], -2)
+        self.assertEqual(moves[2]['classification'], 'good')
+
+    def test_move_that_allows_mate_is_still_a_blunder(self):
+        moves = self.run_game([30, 30, -9990, -9990], user_color='white')
+        self.assertEqual(moves[2]['classification'], 'blunder')
+
+    def test_black_user_moves_are_graded_the_same_way(self):
+        # Black user's 1...e5 loses 370; perspective must not depend on user colour
+        moves = self.run_game([30, 400, 400, 400], user_color='black')
+        self.assertEqual(moves[1]['eval_delta'], -370)
+        self.assertEqual(moves[1]['classification'], 'blunder')
 
 
 class TestPGNParsing(unittest.TestCase):

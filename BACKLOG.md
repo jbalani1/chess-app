@@ -12,10 +12,17 @@ add to it, or go beyond it — see `AGENT.md`. Tick things off in PRs.
       Fixed in the ingester; `db/fix_positive_delta_classification.sql`
       repairs existing rows. Once it has run, the downstream `eval_delta < 0`
       filters can go.
-- [ ] **`ingest.py` still forces `'blunder'` on any move ending past ±5000cp**
+- [x] **`ingest.py` still forces `'blunder'` on any move ending past ±5000cp**
       (around line 500), even from a position that was already mate-lost.
       Less urgent — the nightly ingest appears to use `ingest_recent.py`, but
-      `reanalyze.py` still goes through this path.
+      `reanalyze.py` still goes through this path. Fixed alongside a wider bug:
+      `ingest.py` graded *every* ply from the user's side, so opponent moves
+      had their `eval_delta` sign flipped relative to `ingest_recent.py`.
+      Rows already written by `reanalyze.py` keep the old values.
+- [ ] **Throwing away a forced mate for a merely winning position is a
+      "blunder".** Both ingesters grade mate-in-8 → +8 pawns as a ~9000cp
+      loss. Arguably right, arguably noise; wants a look at how often it
+      happens before deciding.
 - [x] **`blunder_classifier._check_hanging_piece` is over-broad.** It flags any
       attacked, undefended piece after a move regardless of whether the move
       caused it, which is why `hanging_piece` accounts for ~75% of categorised
