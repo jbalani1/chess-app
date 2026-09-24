@@ -27,6 +27,9 @@ from tactic_analyzer import analyze_best_move_tactic
 # Load environment variables
 load_dotenv()
 
+# Engine mate scores are ±10000 minus distance; beyond this is a forced mate.
+MATE_THRESHOLD = 5000
+
 class ChessComIngester:
     """Handles fetching and analyzing Chess.com games"""
     
@@ -359,10 +362,7 @@ class ChessComIngester:
         """
         moves_data = []
         board = game.board()
-        
-        # Determine if user is playing as White or Black
-        is_white = game.headers.get('White', '').lower() == username.lower()
-        
+
         ply = 1
         for move in game.mainline_moves():
             # Get position before move
@@ -395,22 +395,19 @@ class ChessComIngester:
                         }
                         captured_piece = piece_names.get(captured.piece_type)
 
+            # Every ply is stored, so judge each move from the side that played
+            # it, not from the user's side — the same convention as
+            # ingest_recent.py. Judging from the user's side labelled opponent
+            # mistakes 'good' and an opponent's mating attack 'blunder'.
+            mover_is_white = board.turn == chess.WHITE
+
             # Make the move
             board.push(move)
             fen_after = board.fen()
 
-            # Check if this move delivered checkmate
-            # After a move, if is_checkmate() is True, the opponent is in checkmate
+            # After a move, if is_checkmate() is True, the side that just moved won
             is_checkmate = board.is_checkmate()
             is_stalemate = board.is_stalemate()
-
-            # Determine if user delivered checkmate
-            # board.turn is now the side that's in checkmate (they can't move)
-            if is_checkmate:
-                white_won = board.turn == chess.BLACK  # Black is checkmated = White won
-                delivers_checkmate = (is_white and white_won) or (not is_white and not white_won)
-            else:
-                delivers_checkmate = False
 
             # For terminal positions, set eval directly instead of asking engine
             if is_checkmate:
@@ -427,89 +424,41 @@ class ChessComIngester:
                 analysis_result = self.engine.analyze_position_with_best_move(fen_after)
                 eval_after = analysis_result.get('eval', 0)
             
-            # Check if the move allows the opponent to deliver checkmate
-            # Use deeper analysis to find mate threats (like Chess.com)
-            allows_opponent_mate = False
-            if not is_checkmate and not board.is_game_over():
-                # Check if the best move leads to mate
-                if analysis_result.get('best_move'):
-                    # Make the best move and check if it's mate
-                    try:
-                        test_board = chess.Board(fen_after)
-                        best_move_uci = analysis_result['best_move']
-                        best_move_obj = chess.Move.from_uci(best_move_uci)
-                        if best_move_obj in test_board.legal_moves:
-                            test_board.push(best_move_obj)
-                            if test_board.is_checkmate():
-                                allows_opponent_mate = True
-                    except:
-                        pass
-                
-                # Also check if evaluation suggests forced mate
-                # Very high positive eval (from White's perspective) after Black's move = Black allows mate
-                # Very low negative eval (from White's perspective) after White's move = White allows mate
-                if is_white:
-                    # If eval is very negative after White's move, White might be allowing mate
-                    if eval_after < -5000:
-                        allows_opponent_mate = True
-                else:
-                    # If eval is very positive after Black's move, Black might be allowing mate
-                    if eval_after > 5000:
-                        allows_opponent_mate = True
-
             # UCI can be read any time
             move_uci = move.uci()
-            
-            # Calculate eval_delta from user's perspective
-            # Both eval_before and eval_after are White-centric
-            if is_white:
-                # User is White: positive delta = improvement for White
-                eval_delta = eval_after - eval_before
-            else:
-                # User is Black: flip perspective (positive delta = improvement for Black)
-                eval_delta = eval_before - eval_after
-            
-            # Classify the move - checkmate moves are always good!
-            if delivers_checkmate:
-                # If the user delivered checkmate - always good!
+
+            # eval_before/eval_after are White-centric; flip them to the mover's
+            # side so positive always means "better for whoever just moved".
+            sign = 1 if mover_is_white else -1
+            mover_eval_before = sign * eval_before
+            mover_eval_after = sign * eval_after
+            eval_delta = mover_eval_after - mover_eval_before
+
+            # A move only "allows mate" if the mover was not already being mated.
+            # From a mate-lost position every move ends past -5000, so forcing
+            # 'blunder' there filed hopeless positions as fresh errors.
+            allows_opponent_mate = False
+            if not is_checkmate and not board.is_game_over() and mover_eval_before > -MATE_THRESHOLD:
+                if mover_eval_after < -MATE_THRESHOLD:
+                    allows_opponent_mate = True
+                elif analysis_result.get('best_move'):
+                    # Mate in one the engine may not have scored as mate
+                    try:
+                        test_board = chess.Board(fen_after)
+                        reply = chess.Move.from_uci(analysis_result['best_move'])
+                        if reply in test_board.legal_moves:
+                            test_board.push(reply)
+                            allows_opponent_mate = test_board.is_checkmate()
+                    except ValueError:
+                        pass
+
+            if is_checkmate:
+                # The side that just moved delivered mate
                 classification = 'good'
             elif allows_opponent_mate:
-                # If the move allows opponent to deliver checkmate, it's a blunder
                 classification = 'blunder'
-            elif is_checkmate:
-                # Position is checkmate, but check if it's in favor of the user
-                # For White: eval_after should be very positive (mate in favor)
-                # For Black: eval_after should be very negative from White's perspective
-                if is_white:
-                    # White delivered checkmate - eval should be very positive
-                    if eval_after > 5000:
-                        classification = 'good'
-                    else:
-                        # White got checkmated - classify based on eval_delta
-                        classification = self.engine.classify_move(eval_delta)
-                else:
-                    # Black delivered checkmate - eval from White's perspective should be very negative
-                    # But from Black's perspective (after flipping), it should be very positive
-                    if eval_after < -5000:  # Very negative from White's perspective
-                        classification = 'good'
-                    else:
-                        # Black got checkmated - classify based on eval_delta
-                        classification = self.engine.classify_move(eval_delta)
             else:
-                # Check if evaluation suggests a forced mate (very high eval advantage for opponent)
-                # If opponent has a huge advantage (>5000 centipawns), it might indicate forced mate
-                if is_white:
-                    # If eval_after is very negative, White is in trouble
-                    if eval_after < -5000:
-                        classification = 'blunder'
-                    else:
-                        classification = self.engine.classify_move(eval_delta)
-                else:
-                    # If eval_after is very positive (from White's perspective), Black is in trouble
-                    if eval_after > 5000:
-                        classification = 'blunder'
-                    else:
-                        classification = self.engine.classify_move(eval_delta)
+                classification = self.engine.classify_move(eval_delta)
 
             # Override: if the played move is the engine's best move, it's always good
             # This handles forced moves (only one legal move) or when the player found the best move
@@ -593,11 +542,7 @@ class ChessComIngester:
             
             moves_data.append(move_data)
             ply += 1
-            
-            # Only analyze moves for the specified user
-            if (is_white and ply % 2 == 0) or (not is_white and ply % 2 == 1):
-                continue
-        
+
         return moves_data
     
     def store_game(self, game_data: Dict[str, Any], moves_data: List[Dict[str, Any]], username: str, chess_com_game_id: Optional[str] = None):
