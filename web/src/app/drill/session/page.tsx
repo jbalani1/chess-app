@@ -16,6 +16,9 @@ function DrillSessionContent() {
 
   const category = searchParams.get('category')
   const count = parseInt(searchParams.get('count') || '10', 10)
+  // An explicit set of positions, e.g. "drill this recurring group" from the Explorer
+  const moves = searchParams.get('moves')
+  const label = searchParams.get('label')
 
   const [positions, setPositions] = useState<DrillPosition[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -33,8 +36,12 @@ function DrillSessionContent() {
     async function fetchPositions() {
       try {
         const params = new URLSearchParams()
-        if (category) params.set('category', category)
-        params.set('limit', count.toString())
+        if (moves) {
+          params.set('moves', moves)
+        } else {
+          if (category) params.set('category', category)
+          params.set('limit', count.toString())
+        }
 
         const response = await fetch(`/api/drill/positions?${params}`)
         if (!response.ok) throw new Error('Failed to fetch positions')
@@ -55,7 +62,7 @@ function DrillSessionContent() {
       }
     }
     fetchPositions()
-  }, [category, count])
+  }, [category, count, moves])
 
   const currentPosition = positions[currentIndex]
 
@@ -182,7 +189,7 @@ function DrillSessionContent() {
               Back to Dashboard
             </Link>
             <Link
-              href={`/drill/session${category ? `?category=${category}` : ''}`}
+              href={`/drill/session${searchParams.toString() ? `?${searchParams}` : ''}`}
               className="flex-1 px-4 py-3 text-white bg-[var(--accent-primary)] rounded-lg hover:bg-[var(--accent-primary-hover)] font-medium transition-colors"
             >
               Drill Again
@@ -224,21 +231,24 @@ function DrillSessionContent() {
         total={positions.length}
         correct={correctCount}
         category={category || undefined}
+        label={label || undefined}
         startTime={startTime || undefined}
       />
 
       <div className="flex flex-col xl:flex-row gap-6 items-start">
         {/* Board */}
         <div className="card p-5 flex-shrink-0">
-          <div className="mb-4 text-center">
-            <span className={`inline-block px-3 py-1 rounded text-sm font-medium ${
-              currentPosition.blunder_category === 'hanging_piece' ? 'bg-red-500/20 text-red-400' :
-              currentPosition.blunder_category === 'endgame_technique' ? 'bg-purple-500/20 text-purple-400' :
-              'bg-orange-500/20 text-orange-400'
-            }`}>
-              {currentPosition.blunder_category.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-            </span>
-          </div>
+          {currentPosition.blunder_category && (
+            <div className="mb-4 text-center">
+              <span className={`inline-block px-3 py-1 rounded text-sm font-medium ${
+                currentPosition.blunder_category === 'hanging_piece' ? 'bg-red-500/20 text-red-400' :
+                currentPosition.blunder_category === 'endgame_technique' ? 'bg-purple-500/20 text-purple-400' :
+                'bg-orange-500/20 text-orange-400'
+              }`}>
+                {currentPosition.blunder_category.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+              </span>
+            </div>
+          )}
 
           <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-color)]">
             <DrillBoard

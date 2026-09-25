@@ -159,7 +159,8 @@ export interface DrillPosition {
   position_fen: string;
   best_move_san: string;
   best_move_uci: string;
-  blunder_category: BlunderCategory;
+  // Null only for explicitly requested moves that were never categorised
+  blunder_category: BlunderCategory | null;
   blunder_explanation: string;
   eval_delta: number;
   phase: GamePhase;

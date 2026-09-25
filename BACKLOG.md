@@ -44,9 +44,12 @@ add to it, or go beyond it — see `AGENT.md`. Tick things off in PRs.
       is no way to see whether a leak is getting better or worse. A sparkline of
       error rate per 20-game block, respecting the active filters, would answer
       "am I actually improving?"
-- [ ] **Drill straight from a filter.** The Explorer finds recurring mistakes
+- [x] **Drill straight from a filter.** The Explorer finds recurring mistakes
       and the app has a drill mode; they do not connect. "Drill these 7
       positions" from a recurring group is the obvious missing link.
+      Done for recurring groups. Still open: "drill every mistake in this
+      filter" from the list view, which needs the RPC to return all ids
+      rather than one page of rows.
 - [ ] **Opponent-strength context.** Nothing accounts for opponent rating. A
       blunder against a 1400 and a loss to a 2000 are not the same signal.
 - [ ] **Migrate the old `/mistakes` tabs onto `explorer_query`.** They still

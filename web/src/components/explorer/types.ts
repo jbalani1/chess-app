@@ -134,6 +134,18 @@ export function reviewUrl(gameId: string, moveId: string): string {
   return `/games/${gameId}?move=${moveId}`
 }
 
+/** Drill session over every occurrence of a recurring mistake. The drill API
+ *  caps an explicit set at 50 moves, so the URL stays well under any limit. */
+export function drillUrl(group: RecurringGroup): string | null {
+  const ids = (group.examples ?? []).map((ex) => ex.move_id).slice(0, 50)
+  if (ids.length === 0) return null
+  const params = new URLSearchParams({
+    moves: ids.join(','),
+    label: `${group.move_san} ×${group.n}`,
+  })
+  return `/drill/session?${params}`
+}
+
 /** Deep link to the move on chess.com, falling back to the plain game page. */
 export function moveUrl(url: string | null, ply: number): string | null {
   if (!url) return null

@@ -2,12 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { DrillPosition, JoinedGameData } from '@/lib/types'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const MAX_EXPLICIT_MOVES = 50
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
-    const limit = parseInt(searchParams.get('limit') || '10', 10)
     const username = process.env.CHESS_COM_USERNAME || 'negrilmannings'
+
+    // An explicit set of moves (e.g. one recurring group from the Explorer).
+    // These were already chosen as mistakes upstream, so the category and
+    // classification filters below don't apply — only "can it be drilled".
+    const moveIds = (searchParams.get('moves') || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => UUID_RE.test(s))
+      .slice(0, MAX_EXPLICIT_MOVES)
+    const explicit = searchParams.has('moves')
+    if (explicit && moveIds.length === 0) {
+      return NextResponse.json([])
+    }
+    const limit = explicit ? moveIds.length : parseInt(searchParams.get('limit') || '10', 10)
 
     // Fetch positions from the drill_positions_due view
     // Priority: 1) Due for review (past next_review_at), 2) Never drilled (sorted by worst eval_delta)
@@ -32,13 +48,18 @@ export async function GET(request: NextRequest) {
           played_at
         )
       `)
-      .in('classification', ['mistake', 'blunder'])
-      .not('blunder_category', 'is', null)
       .not('best_move_uci', 'is', null)
       .not('position_fen_before', 'is', null)
 
-    if (category) {
-      query = query.eq('blunder_category', category)
+    if (explicit) {
+      query = query.in('id', moveIds)
+    } else {
+      query = query
+        .in('classification', ['mistake', 'blunder'])
+        .not('blunder_category', 'is', null)
+      if (category) {
+        query = query.eq('blunder_category', category)
+      }
     }
 
     const { data: moves, error } = await query.order('eval_delta', { ascending: true }).limit(200)
@@ -53,12 +74,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get existing drill attempts to check what's due for review
-    const moveIds = moves.map(m => m.id)
     const { data: attempts } = await supabaseAdmin
       .from('drill_attempts')
       .select('move_id, next_review_at, repetition_number, is_correct, created_at')
       .eq('username', username)
-      .in('move_id', moveIds)
+      .in('move_id', moves.map(m => m.id))
       .order('created_at', { ascending: false })
 
     // Create a map of latest attempt per move
