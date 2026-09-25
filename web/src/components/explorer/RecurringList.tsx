@@ -1,9 +1,9 @@
 'use client'
 
-import { ExternalLink, Repeat } from 'lucide-react'
+import { ExternalLink, Repeat, Target } from 'lucide-react'
 import type { RecurringGroup } from './types'
 import Link from 'next/link'
-import { EDGE_SHORT, moveUrl, reviewUrl } from './types'
+import { EDGE_SHORT, drillUrl, moveUrl, reviewUrl } from './types'
 
 /**
  * The same move played wrong more than once inside the current filter.
@@ -27,6 +27,7 @@ export default function RecurringList({ groups }: { groups: RecurringGroup[] }) 
       {groups.map((g) => {
         const examples = (g.examples ?? []).slice(0, 6)
         const better = (g.better ?? []).filter((b) => b !== g.move_san).slice(0, 4)
+        const drill = drillUrl(g)
         return (
           <div
             key={`${g.move_san}-${g.piece}`}
@@ -55,6 +56,16 @@ export default function RecurringList({ groups }: { groups: RecurringGroup[] }) 
               <span className="text-xs text-[var(--text-muted)]">
                 moves {g.first_move_no}–{g.last_move_no}
               </span>
+              {drill && (
+                <Link
+                  href={drill}
+                  className="ml-auto inline-flex items-center gap-1 rounded border border-[var(--border-color)] px-2 py-0.5 text-xs font-medium text-[var(--accent-primary)] transition-colors hover:bg-[var(--bg-hover)]"
+                  title="Replay each of these positions and find the move you missed"
+                >
+                  <Target size={12} />
+                  Drill these {g.examples?.length === 1 ? 'position' : 'positions'}
+                </Link>
+              )}
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">

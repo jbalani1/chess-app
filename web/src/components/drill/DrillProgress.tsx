@@ -5,6 +5,8 @@ interface DrillProgressProps {
   total: number
   correct: number
   category?: string
+  /** Shown verbatim instead of the formatted category */
+  label?: string
   startTime?: Date
 }
 
@@ -13,6 +15,7 @@ export default function DrillProgress({
   total,
   correct,
   category,
+  label,
   startTime
 }: DrillProgressProps) {
   const progress = total > 0 ? (current / total) * 100 : 0
@@ -24,7 +27,9 @@ export default function DrillProgress({
   const seconds = elapsed % 60
 
   // Format category name for display
-  const categoryDisplay = category
+  const categoryDisplay = label
+    ? label
+    : category
     ? category.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
     : 'All Categories'
 
